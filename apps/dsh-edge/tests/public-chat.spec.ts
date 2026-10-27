@@ -78,7 +78,7 @@ describe('anonymous chat boundary', () => {
     expect(cors.headers.get('vary')).toContain('Origin')
     expect((await cors.text())).not.toContain('secret-test')
     const untrusted = new Request(uri, { headers: { origin: 'https://attacker.invalid' } })
-    const blocked = publicChatWithCors(untrusted, response.clone())
+    const blocked = publicChatWithCors(untrusted, new Response('{}'))
     expect(blocked.headers.has('access-control-allow-origin')).toBe(false)
   })
 
