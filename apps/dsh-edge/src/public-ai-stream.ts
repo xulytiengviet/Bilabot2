@@ -100,7 +100,7 @@ export function createPublicTraceSplitter() {
   const ANSWER = '<final_answer>'
   let phase = 'start'
   let pending = ''
-  function ingest(chunk, final = false) {
+  function ingest(chunk: string, final = false) {
     pending += chunk
     let trace = '', answer = ''
     for (let count = 0; count < 8; count++) {
@@ -150,5 +150,5 @@ export function createPublicTraceSplitter() {
     }
     return { trace, answer }
   }
-  return { push: value => ingest(value), finish: () => ingest('', true) }
+  return { push: (value: string) => ingest(value), finish: () => ingest('', true) }
 }
