@@ -5,8 +5,8 @@
 import { EdgeHttpError, readJsonObject } from './http.ts'
 import { publicChatHtml, publicChatJavascript } from './public-chat-page.ts'
 import { cvnssConverterSource } from './cvnss-converter-bundle.ts'
-import { PUBLIC_VISITOR_MAX_QUESTIONS, quotaCall } from './visitor-quota.ts'
-import type { PublicQuotaEnv } from './visitor-quota.ts'
+import { PUBLIC_VISITOR_MAX_QUESTIONS, quotaCall } from './visitor-quota-core.ts'
+import type { PublicQuotaEnv } from './visitor-quota-core.ts'
 
 export interface PublicChatEnv extends PublicQuotaEnv {
   DSH_EDGE_PUBLIC_CHAT?: string
