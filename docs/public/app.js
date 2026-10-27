@@ -7,6 +7,11 @@
   const version = converter && converter.VERSION === '5.0.0-audit-safe';
   const validMessage = m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string';
   let chats = [], current = '', busy = false;
+  function showNotice(message) {
+    const notice = $('notice');
+    notice.textContent = message || '';
+    notice.hidden = !message;
+  }
   try {
     const old = JSON.parse(localStorage.getItem(KEY) || '[]');
     if (Array.isArray(old)) chats = old.filter(c => c && typeof c.id === 'string' && Array.isArray(c.messages))
@@ -18,7 +23,7 @@
   } catch { chats = []; }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(chats.slice(-32))); }
-    catch { $('status').textContent = 'Bộ nhớ đầy'; }
+    catch { showNotice('Bộ nhớ trình duyệt đã đầy. Bạn có thể xuất hoặc xóa lịch sử.'); }
   }
   function active() { return chats.find(c => c.id === current); }
   function closeSidebar() { $('sidebar').classList.remove('open'); }
@@ -33,13 +38,12 @@
     icon.className = 'heroicon';
     icon.innerHTML = brainSvg;
     const tag = document.createElement('div');
-    tag.className = 'sublabel'; tag.textContent = 'CVNSS4.0 · BỘ NÃO KÝ HIỆU';
+    tag.className = 'sublabel'; tag.textContent = 'BILA · TRỢ LÝ CỦA BẠN';
     const h = document.createElement('h1'); h.textContent = 'Xin chào, tôi là BilaBot';
     const p = document.createElement('p');
-    p.textContent = 'Hỏi bằng tiếng Việt tự nhiên, nhận câu trả lời Unicode rõ ràng. CVNSS4.0 là lớp biểu diễn văn bản bổ trợ.';
+    p.textContent = 'Đặt câu hỏi và nhận câu trả lời bằng tiếng Việt tự nhiên.';
     el.append(icon, tag, h, p);
-    const choices = [['CVNSS4.0 là gì?', 'Giới thiệu CVNSS4.0'],
-      ['Hướng dẫn học lập trình', 'Gợi ý lộ trình học lập trình'],
+    const choices = [['Hướng dẫn học lập trình', 'Gợi ý lộ trình học lập trình'],
       ['Giải thích một khái niệm', 'Giải thích GIS và bản đồ số'],
       ['Viết một đoạn văn', 'Viết đoạn văn ngắn về khoa học']];
     const suggestions = document.createElement('div');
@@ -147,16 +151,14 @@
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể kết nối API.');
       c.messages.push({ role: 'assistant', content: String(data.answer).normalize('NFC') });
-      $('status').textContent = 'Sẵn sàng'; save(); render();
+      showNotice(''); save(); render();
     } catch (error) {
-      $('status').textContent = error instanceof Error ? error.message : 'Yêu cầu thất bại';
+      showNotice(error instanceof Error ? error.message : 'Yêu cầu thất bại');
     } finally { lock(false); $('prompt').focus(); }
   });
   if (chats.length) { current = chats[chats.length - 1].id; render(); }
   else newChat();
   fetch('https://bilabot2.bilabot-cvnss4-71bd4651.workers.dev/api/public/config', { credentials: 'omit' }).then(r => r.json()).then(data => {
-    $('model').textContent = data.model || 'DeepSeek';
-    $('status').textContent = data.ready ? 'Sẵn sàng' : 'Chưa có API key';
-    $('status').title = data.ready ? 'Model và khóa do chủ website cấu hình trên Cloudflare' : 'Chủ website cần cài đặt DeepSeek API key trong Worker Secret';
-  }).catch(() => { $('status').textContent = 'Không kết nối'; });
+    if (!data.ready) showNotice('Trợ lý tạm thời chưa sẵn sàng. Vui lòng thử lại sau.');
+  }).catch(() => { showNotice('Không thể kết nối dịch vụ. Vui lòng thử lại sau.'); });
 })();

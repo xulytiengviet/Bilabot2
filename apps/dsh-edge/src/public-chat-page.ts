@@ -6,7 +6,7 @@ export const publicChatHtml = `<!doctype html>
 <html lang="vi"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer"><meta name="theme-color" content="#f8fafc">
-<title>BilaBot · Bộ não CVNSS4.0</title>
+<title>BilaBot · Trợ lý Bila</title>
 <style>
 :root{color-scheme:light;--page:#f6f8fc;--paper:#fff;--ink:#19243c;--muted:#66758d;--line:#e4eaf3;--accent:#245cbd;--light:#eaf2ff;--cyan:#069aab;--shadow:0 14px 50px rgba(37,65,118,.045);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
 *{box-sizing:border-box}
@@ -72,6 +72,12 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .tools{display:flex;gap:7px;flex-wrap:wrap}.tools .btn{padding:6px 9px;font-size:11.5px;color:#687b96;font-weight:550}
 #send{padding:9px 19px;font-size:12px}
 .disclaimer{text-align:center;margin:9px auto 0;max-width:900px;font-size:10.5px;color:#8895a9}
+.notice{max-width:900px;margin:9px auto 0;padding:9px 12px;background:#fff6ec;border:1px solid #f8dec0;border-radius:9px;font-size:12px;color:#96541b;text-align:center}
+.notice[hidden]{display:none}
+.credits{flex-shrink:0;text-align:center;background:#fbfcff;border-top:1px solid var(--line);padding:10px 18px;color:#687993;font-size:11px;line-height:1.6}
+.credits strong{font-weight:700;color:#3d506d}
+@media(max-width:830px){.credits{padding:9px 14px;font-size:10px}.credit-sep{display:none}}
+
 @media(max-width:830px){.app{grid-template-columns:1fr}.sidebar{position:fixed;z-index:20;top:0;bottom:0;left:0;box-shadow:12px 0 40px #16284e20;width:min(300px,88vw);transform:translateX(-110%);transition:transform .2s}.sidebar.open{transform:translateX(0)}
 #toggle-sidebar{display:block}.topbar{min-height:68px;padding:11px 15px}.workspace{height:100dvh}.top-right{gap:7px}.model{max-width:138px}.status{display:none}
 #messages{padding:24px 17px;gap:17px}.composer{padding:12px 12px 13px}.msg{gap:8px}.suggestions{grid-template-columns:1fr}.hero{padding:15px 4px}.disclaimer{font-size:9px}}
@@ -80,24 +86,22 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <body><div class="app">
 <aside class="sidebar" id="sidebar">
   <div class="brand"><div class="brandmark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M32 13C22 4 8 11 11 24c-8 6-7 17 1 21-1 12 14 17 20 6 6 11 21 6 20-6 8-4 9-15 1-21C56 11 42 4 32 13Z"/><path d="M32 13v38M19 23l7 6-6 8M45 23l-7 6 6 8"/><circle cx="26" cy="29" r="2" fill="currentColor" stroke="none"/><circle cx="38" cy="29" r="2" fill="currentColor" stroke="none"/></svg></div>
-    <div class="brandtext"><b>BilaBot</b><span>CVNSS4.0 × DeepSeek</span></div>
+    <div class="brandtext"><b>BilaBot</b></div>
   </div>
   <button class="btn primary create" id="new">＋ &nbsp;Cuộc trò chuyện mới</button>
   <section><div class="sectionlabel">Lịch sử trên thiết bị</div><nav id="history" class="history" aria-label="Các cuộc trò chuyện"></nav></section>
-  <div class="sidebar-end">
-    <div class="meta-panel"><div class="metalabel">Bộ não CVNSS4.0</div><div class="pipeline"><span>CVNSS4.0</span>→<span>DeepSeek</span>→<span>Unicode</span></div><p class="note">Bộ chuyển đổi CVNSS4.0 phục vụ hiển thị mã văn bản, không phải nhật ký suy luận của model.</p></div>
-    <div class="note">Lịch sử chỉ nằm trong trình duyệt của bạn. Câu hỏi vẫn được chuyển tới DeepSeek để trả lời. <a href="/login">Quản trị</a></div>
-  </div>
+
 </aside>
 <main class="workspace">
-<header class="topbar"><div class="topinfo"><button class="btn" id="toggle-sidebar" aria-label="Mở danh sách hội thoại">☰</button> <b>BilaBot · Trợ lý tiếng Việt</b><p>Trò chuyện công khai · Không yêu cầu đăng nhập</p></div>
-  <div class="top-right"><span class="model" id="model">Mô hình cố định</span><span class="status"><span class="dot"></span><span id="status">Đang kiểm tra…</span></span></div>
+<header class="topbar"><div class="topinfo"><button class="btn" id="toggle-sidebar" aria-label="Mở danh sách hội thoại">☰</button> <b>Trợ lý Bila</b></div>
+
 </header>
 <section id="messages" aria-live="polite"></section>
 <div class="composer"><form id="chat-form" class="composebox"><label for="prompt" class="sectionlabel">Tin nhắn của bạn</label>
   <textarea id="prompt" maxlength="6000" required aria-label="Nhập tin nhắn" placeholder="Nhập câu hỏi bằng tiếng Việt..."></textarea>
   <div class="compose-actions"><div class="tools"><button class="btn" id="export" type="button" title="Tải lịch sử JSON">↓ Xuất lịch sử</button><button class="btn" id="clear" type="button" title="Xóa lịch sử trên trình duyệt">Xóa lịch sử</button></div><button id="send" class="btn primary" type="submit">Gửi ↗</button></div>
-</form><p class="disclaimer">Dữ liệu hội thoại được lưu cục bộ trên trình duyệt. Vui lòng không gửi thông tin nhạy cảm. Enter để gửi · Shift+Enter xuống dòng.</p></div>
+</form><p id="notice" class="notice" role="status" aria-live="polite" hidden></p><p class="disclaimer">Dữ liệu hội thoại được lưu cục bộ trên trình duyệt. Vui lòng không gửi thông tin nhạy cảm. Enter để gửi · Shift+Enter xuống dòng.</p></div>
+<footer class="credits">@2026, <strong>Trần Tư Bình</strong> và <strong>Kiều Trường Lâm</strong> phát kiến CVNSS4.0 <span class="credit-sep">·</span> Nguồn: <strong>Long Ngo</strong> phát triển · Giấy phép MIT</footer>
 </main></div>
 <script src="/public/cvnss.js" defer></script><script src="/public/app.js" defer></script>
 </body></html>`;
@@ -111,6 +115,11 @@ export const publicChatJavascript = String.raw`'use strict';
   const version = converter && converter.VERSION === '5.0.0-audit-safe';
   const validMessage = m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string';
   let chats = [], current = '', busy = false;
+  function showNotice(message) {
+    const notice = $('notice');
+    notice.textContent = message || '';
+    notice.hidden = !message;
+  }
   try {
     const old = JSON.parse(localStorage.getItem(KEY) || '[]');
     if (Array.isArray(old)) chats = old.filter(c => c && typeof c.id === 'string' && Array.isArray(c.messages))
@@ -122,7 +131,7 @@ export const publicChatJavascript = String.raw`'use strict';
   } catch { chats = []; }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(chats.slice(-32))); }
-    catch { $('status').textContent = 'Bộ nhớ đầy'; }
+    catch { showNotice('Bộ nhớ trình duyệt đã đầy. Bạn có thể xuất hoặc xóa lịch sử.'); }
   }
   function active() { return chats.find(c => c.id === current); }
   function closeSidebar() { $('sidebar').classList.remove('open'); }
@@ -137,13 +146,12 @@ export const publicChatJavascript = String.raw`'use strict';
     icon.className = 'heroicon';
     icon.innerHTML = brainSvg;
     const tag = document.createElement('div');
-    tag.className = 'sublabel'; tag.textContent = 'CVNSS4.0 · BỘ NÃO KÝ HIỆU';
+    tag.className = 'sublabel'; tag.textContent = 'BILA · TRỢ LÝ CỦA BẠN';
     const h = document.createElement('h1'); h.textContent = 'Xin chào, tôi là BilaBot';
     const p = document.createElement('p');
-    p.textContent = 'Hỏi bằng tiếng Việt tự nhiên, nhận câu trả lời Unicode rõ ràng. CVNSS4.0 là lớp biểu diễn văn bản bổ trợ.';
+    p.textContent = 'Đặt câu hỏi và nhận câu trả lời bằng tiếng Việt tự nhiên.';
     el.append(icon, tag, h, p);
-    const choices = [['CVNSS4.0 là gì?', 'Giới thiệu CVNSS4.0'],
-      ['Hướng dẫn học lập trình', 'Gợi ý lộ trình học lập trình'],
+    const choices = [['Hướng dẫn học lập trình', 'Gợi ý lộ trình học lập trình'],
       ['Giải thích một khái niệm', 'Giải thích GIS và bản đồ số'],
       ['Viết một đoạn văn', 'Viết đoạn văn ngắn về khoa học']];
     const suggestions = document.createElement('div');
@@ -251,17 +259,15 @@ export const publicChatJavascript = String.raw`'use strict';
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể kết nối API.');
       c.messages.push({ role: 'assistant', content: String(data.answer).normalize('NFC') });
-      $('status').textContent = 'Sẵn sàng'; save(); render();
+      showNotice(''); save(); render();
     } catch (error) {
-      $('status').textContent = error instanceof Error ? error.message : 'Yêu cầu thất bại';
+      showNotice(error instanceof Error ? error.message : 'Yêu cầu thất bại');
     } finally { lock(false); $('prompt').focus(); }
   });
   if (chats.length) { current = chats[chats.length - 1].id; render(); }
   else newChat();
   fetch('/api/public/config', { credentials: 'omit' }).then(r => r.json()).then(data => {
-    $('model').textContent = data.model || 'DeepSeek';
-    $('status').textContent = data.ready ? 'Sẵn sàng' : 'Chưa có API key';
-    $('status').title = data.ready ? 'Model và khóa do chủ website cấu hình trên Cloudflare' : 'Chủ website cần cài đặt DeepSeek API key trong Worker Secret';
-  }).catch(() => { $('status').textContent = 'Không kết nối'; });
+    if (!data.ready) showNotice('Trợ lý tạm thời chưa sẵn sàng. Vui lòng thử lại sau.');
+  }).catch(() => { showNotice('Không thể kết nối dịch vụ. Vui lòng thử lại sau.'); });
 })();
 `;
