@@ -6,6 +6,119 @@
   const converter = window.CVNSSConverter;
   const version = converter && converter.VERSION === '5.0.0-audit-safe';
   const validMessage = m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string';
+
+  // Chỉ diễn giải tiến trình xử lý thực tế, không mô phỏng chain-of-thought.
+  const traceStart = 'Đã tiếp nhận câu hỏi.\nĐã chuẩn bị ngữ cảnh hội thoại.\nĐang chờ Cloudflare Workers AI trả lời.';
+  const traceDone = 'Đã tiếp nhận câu hỏi.\nĐã gửi yêu cầu tới Cloudflare Workers AI.\nĐã nhận câu trả lời từ mô hình.\nĐã hoàn thiện nội dung tiếng Việt Unicode.';
+  const cleanAnswer = raw => String(raw || '').replace(/<think>[\s\S]*?<\/think>/giu, '')
+    .replace(/<think>[\s\S]*$/giu, '').trim().normalize('NFC');
+  function appendInline(target, raw) {
+    const value = String(raw).replace(/\\([*#_])/g, '$1');
+    const rx = /(\*\*[^*\n]+?\*\*|__[^_\n]+?__|\x60[^\x60\n]+\x60|\*[^*\n]+?\*|\[[^\]\n]+\]\(https?:\/\/[^\s)]+\))/g;
+    let last = 0, match;
+    const plain = str => target.append(document.createTextNode(str.replace(/\*\*/g, '').replace(/__+/g, '')));
+    while ((match = rx.exec(value))) {
+      if (match.index > last) plain(value.slice(last, match.index));
+      const token = match[0];
+      let node;
+      if (token.startsWith('**') || token.startsWith('__')) {
+        node = document.createElement('strong'); node.textContent = token.slice(2, -2);
+      } else if (token.charCodeAt(0) === 96) {
+        node = document.createElement('code'); node.textContent = token.slice(1, -1);
+      } else if (token.startsWith('*')) {
+        node = document.createElement('em'); node.textContent = token.slice(1, -1);
+      } else {
+        const matchLink = /^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/.exec(token);
+        if (matchLink) {
+          node = document.createElement('a'); node.href = matchLink[2]; node.target = '_blank';
+          node.rel = 'noopener noreferrer'; node.textContent = matchLink[1];
+        } else node = document.createTextNode(token);
+      }
+      target.append(node); last = rx.lastIndex;
+    }
+    if (last < value.length) plain(value.slice(last));
+  }
+  function renderAnswer(target, raw) {
+    target.replaceChildren();
+    const lines = cleanAnswer(raw).replace(/\r\n?/g, '\n').split('\n');
+    const fence = String.fromCharCode(96).repeat(3);
+    let para = [], list = null, inCode = false, codeLines = [];
+    const flush = () => {
+      if (!para.length) return;
+      const p = document.createElement('p'); appendInline(p, para.join(' '));
+      target.append(p); para = [];
+    };
+    const flushCode = () => {
+      const pre = document.createElement('pre'), code = document.createElement('code');
+      code.textContent = codeLines.join('\n'); pre.append(code); target.append(pre);
+      codeLines = [];
+    };
+    const cells = text => text.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(x => x.trim());
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i], trimmed = line.trim();
+      if (trimmed.startsWith(fence)) {
+        if (inCode) { flushCode(); inCode = false; }
+        else { flush(); list = null; inCode = true; }
+        continue;
+      }
+      if (inCode) { codeLines.push(line); continue; }
+      if (!trimmed) { flush(); list = null; continue; }
+      if (trimmed.startsWith('|') && i + 1 < lines.length &&
+          /^\s*\|?\s*:?-{3,}:?[\s|:-]*$/.test(lines[i + 1])) {
+        flush(); list = null;
+        const table = document.createElement('table'), head = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        for (const cell of cells(line)) {
+          const th = document.createElement('th'); appendInline(th, cell); headRow.append(th);
+        }
+        head.append(headRow); table.append(head); i++;
+        const tbody = document.createElement('tbody');
+        while (i + 1 < lines.length && lines[i + 1].trim().startsWith('|')) {
+          i++; const tr = document.createElement('tr');
+          for (const cell of cells(lines[i])) {
+            const td = document.createElement('td'); appendInline(td, cell); tr.append(td);
+          }
+          tbody.append(tr);
+        }
+        table.append(tbody);
+        const wrap = document.createElement('div'); wrap.className = 'answer-table';
+        wrap.append(table); target.append(wrap); continue;
+      }
+      const heading = /^\s{0,3}(#{1,6})\s*(.+?)\s*#*\s*$/.exec(line);
+      if (heading) {
+        flush(); list = null;
+        const h = document.createElement(heading[1].length < 3 ? 'h2' : 'h3');
+        appendInline(h, heading[2]); target.append(h); continue;
+      }
+      const ul = /^\s*[-*+]\s+(.+)$/.exec(line), ol = /^\s*(\d+)[.)]\s+(.+)$/.exec(line);
+      if (ul || ol) {
+        flush();
+        const tag = ol ? 'ol' : 'ul';
+        if (!list || list.tagName.toLowerCase() !== tag) {
+          list = document.createElement(tag);
+          if (ol && Number(ol[1]) > 1) list.start = Number(ol[1]);
+          target.append(list);
+        }
+        const li = document.createElement('li'); appendInline(li, ul ? ul[1] : ol[2]); list.append(li);
+        continue;
+      }
+      if (/^\s*>\s?/.test(line)) {
+        flush(); list = null; const q = document.createElement('blockquote');
+        appendInline(q, line.replace(/^\s*>\s?/, '')); target.append(q); continue;
+      }
+      list = null; para.push(trimmed);
+    }
+    flush();
+    if (inCode) flushCode();
+  }
+  function updateProgress(card, message, seconds) {
+    if (!card || !card.isConnected) return;
+    const status = card.querySelector('.reason-status');
+    const content = card.querySelector('.reason-code');
+    if (status) status.textContent = message;
+    if (content) content.textContent = cvssPreview(traceStart + (seconds == null ? '' : '\nThời gian xử lý: ' + seconds + ' giây.'));
+  }
+
   let chats = [], current = '', busy = false;
   function showNotice(message) {
     const notice = $('notice');
@@ -68,26 +181,29 @@
     else avatar.textContent = '●';
     const body = document.createElement('div'); body.className = 'msg-body';
     const meta = document.createElement('div'); meta.className = 'msg-meta';
-    meta.textContent = msg.role === 'user' ? 'Bạn' : 'BilaBot · Unicode tiếng Việt';
-    const text = document.createElement('div'); text.className = 'msg-text';
-    text.textContent = msg.content.normalize('NFC');
-    body.append(meta, text);
-    if (msg.role === 'assistant') {
-      const details = document.createElement('details'); details.className = 'cvnss-detail';
+    meta.textContent = msg.role === 'user' ? 'Bạn' : 'BilaBot';
+    body.append(meta);
+    if (msg.role === 'assistant' && (msg.pending || msg.trace)) {
+      const details = document.createElement('details');
+      details.className = 'reasoning-panel' + (msg.pending ? ' streaming' : ' complete');
+      details.open = Boolean(msg.pending);
       const summary = document.createElement('summary');
-      summary.textContent = '◈ Xem cách mã hóa câu trả lời bằng CVNSS4.0';
-      const pre = document.createElement('pre');
-      const hint = document.createElement('small');
-      hint.textContent = 'Bản mã văn bản từ CVNSS4.0 Converter v5.0.0-audit-safe; không phải suy luận nội bộ của DeepSeek.';
-      details.append(summary, pre, hint);
-      details.addEventListener('toggle', () => {
-        if (details.open && !pre.dataset.ready) {
-          pre.textContent = cvssPreview(msg.content);
-          pre.dataset.ready = '1';
-        }
-      });
-      body.append(details);
+      const symbol = document.createElement('span'); symbol.className = 'reason-symbol'; symbol.textContent = '◈';
+      const heading = document.createElement('span'); heading.textContent = 'Tiến trình AI · CVNSS4.0';
+      const status = document.createElement('span'); status.className = 'reason-status';
+      status.textContent = msg.pending ? 'Đang xử lý' : 'Hoàn tất';
+      summary.append(symbol, heading, status);
+      const pre = document.createElement('pre'); pre.className = 'reason-code';
+      pre.textContent = cvssPreview(msg.trace || traceStart);
+      details.append(summary, pre); body.append(details);
     }
+    const text = document.createElement('div');
+    text.className = 'msg-text' + (msg.role === 'assistant' ? ' rich-answer' : '');
+    if (msg.pending) {
+      text.classList.add('pending-answer'); text.textContent = 'BilaBot đang chuẩn bị câu trả lời…';
+    } else if (msg.role === 'assistant') renderAnswer(text, msg.content);
+    else text.textContent = msg.content.normalize('NFC');
+    body.append(text);
     section.append(avatar, body); return section;
   }
   function render() {
@@ -121,9 +237,9 @@
     }
     let total = a.reduce((n, m) => n + m.content.length, 0);
     while (total > 26000 && a.length > 1) total -= a.shift().content.length;
-    return a;
+    return a.map(m => ({ role: m.role, content: m.content }));
   }
-  async function readAnswer(response) {
+  async function readAnswer(response, card) {
     const kind = response.headers.get('content-type') || '';
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
@@ -136,10 +252,8 @@
       return data;
     }
     if (!response.body) throw new Error('Không nhận được luồng trả lời.');
-    const card = createMessage({ role: 'assistant', content: '' });
     const label = card.querySelector('.msg-text');
-    label.textContent = 'Bila đang kết nối tới AI…';
-    $('messages').append(card);
+    updateProgress(card, 'Đang nhận dữ liệu');
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '', draft = '', complete = false, remaining;
@@ -159,10 +273,11 @@
           if (!source) continue;
           let event;
           try { event = JSON.parse(source); } catch { continue; }
-          if (event.type === 'status' && !draft) label.textContent = event.text || 'Bila đang xử lý…';
+          if (event.type === 'status' && !draft) updateProgress(card, 'AI đang phản hồi');
           if (event.type === 'delta' && typeof event.text === 'string') {
             draft += event.text;
-            label.textContent = draft.normalize('NFC');
+            renderAnswer(label, draft);
+            updateProgress(card, 'Đang nhận câu trả lời');
             $('messages').scrollTop = $('messages').scrollHeight;
           }
           if (event.type === 'error') throw new Error(event.message || 'Yêu cầu thất bại.');
@@ -204,6 +319,14 @@
     c.messages.push(item);
     if (c.messages.length === 1) c.title = prompt.slice(0, 55);
     $('prompt').value = ''; save(); render(); lock(true);
+    const live = createMessage({ role: 'assistant', content: '', pending: true, trace: traceStart });
+    $('messages').append(live);
+    $('messages').scrollTop = $('messages').scrollHeight;
+    const started = Date.now();
+    const progressTimer = setInterval(() => {
+      const seconds = Math.floor((Date.now() - started) / 1000);
+      updateProgress(live, 'Đang xử lý · ' + seconds + ' giây', seconds);
+    }, 1000);
     const controller = new AbortController();
     // Always recover the composer, even if a network path never completes.
     const timeout = setTimeout(() => controller.abort(), 90000);
@@ -214,8 +337,8 @@
         body: JSON.stringify({ messages: boundedContext(c.messages) }),
         signal: controller.signal
       });
-      const data = await readAnswer(response);
-      c.messages.push({ role: 'assistant', content: String(data.answer).normalize('NFC') });
+      const data = await readAnswer(response, live);
+      c.messages.push({ role: 'assistant', content: cleanAnswer(data.answer), trace: traceDone });
       showNotice('');
       if (typeof data.remaining === 'number') {
         $('quota-info').textContent = data.remaining > 0
@@ -235,6 +358,7 @@
         : error instanceof Error ? error.message : 'Yêu cầu thất bại';
       showNotice(msg);
     } finally {
+      clearInterval(progressTimer);
       clearTimeout(timeout);
       lock(false);
       $('prompt').focus();
