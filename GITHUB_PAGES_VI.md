@@ -19,9 +19,9 @@ Nếu Pages đã cấu hình `main/(root)` hoặc `main/docs`, không cần ch�
 
 ## Liên kết với API Cloudflare
 
-Giao diện GitHub Pages gửi câu hỏi tới **`https://bilabot2.bilabot-cvnss4-71bd4651.workers.dev/api/public/chat`** và đọc model/trạng thái ở `/api/public/config`. API Worker chỉ thêm header CORS cho origin **`https://xulytiengviet.github.io`**, không cho phép chia sẻ credential và không mở các route admin. Lịch sử lưu ở `localStorage` của trình duyệt; tuyệt đối không đặt `DEEPSEEK_API_KEY` vào frontend.
+Giao diện GitHub Pages gửi câu hỏi tới **`https://bilabot2.bilabot-cvnss4-71bd4651.workers.dev/api/public/chat`** và đọc model/trạng thái ở `/api/public/config`. API Worker chỉ thêm header CORS cho origin **`https://xulytiengviet.github.io`**, không cho phép chia sẻ credential và không mở các route admin. Lịch sử lưu ở `localStorage` của trình duyệt; không đặt bất kỳ API key nào vào frontend.
 
-Tại Cloudflare: Worker **bilabot2** → **Settings → Variables and Secrets**, nhập `DEEPSEEK_API_KEY` (Secret) và `DSH_EDGE_ACCESS_KEY` (Secret). Model `deepseek-flash` cố định tại Wrangler vars. Không chia sẻ API key trong issue, log hoặc chat.
+Tại Cloudflare: Worker **bilabot2** dùng Workers AI Binding `AI`, mặc định model `@cf/deepseek-ai/deepseek-r1-distill-qwen-32b` theo `wrangler.jsonc`, **không cần nhập DeepSeek/OpenRouter API key**. Bộ đếm SQLite Durable Object giới hạn 10 câu hỏi thành công tổng cộng trên mỗi IP và rate limiter vẫn giữ 5 yêu cầu/phút.
 
 **Riêng tư:** Trình duyệt lưu history trong origin `https://xulytiengviet.github.io`, nên tất cả các dự án GitHub Pages dưới cùng hostname có thể dùng chung vùng localStorage theo chính sách same-origin. Dữ liệu không được gửi cho server lưu lịch sử, nhưng câu hỏi/chút lịch sử ngữ cảnh được chuyển đến DeepSeek để phản hồi. Nếu cần cách ly lưu trữ giữa nhiều dự án, ưu tiên custom domain riêng cho BilaBot2.
 
