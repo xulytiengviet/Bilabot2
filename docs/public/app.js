@@ -189,7 +189,7 @@
       details.open = Boolean(msg.pending);
       const summary = document.createElement('summary');
       const symbol = document.createElement('span'); symbol.className = 'reason-symbol'; symbol.textContent = '◈';
-      const heading = document.createElement('span'); heading.textContent = 'Tiến trình AI · CVNSS4.0';
+      const heading = document.createElement('span'); heading.textContent = 'Tôi đang suy nghĩ...';
       const status = document.createElement('span'); status.className = 'reason-status';
       status.textContent = msg.pending ? 'Đang xử lý' : (msg.elapsed ? msg.elapsed + ' giây' : 'Hoàn tất');
       summary.append(symbol, heading, status);
