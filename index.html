@@ -2,7 +2,7 @@
 <html lang="vi"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer"><meta name="theme-color" content="#f8fafc">
-<title>BilaBot · Trợ lý Bila</title>
+<title>BilaBot</title>
 <style>
 :root{color-scheme:light;--page:#f6f8fc;--paper:#fff;--ink:#19243c;--muted:#66758d;--line:#e4eaf3;--accent:#245cbd;--light:#eaf2ff;--cyan:#069aab;--shadow:0 14px 50px rgba(37,65,118,.045);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
 *{box-sizing:border-box}
@@ -79,6 +79,36 @@ button:disabled{opacity:.55;cursor:not-allowed}
 #toggle-sidebar{display:block}.topbar{min-height:68px;padding:11px 15px}.workspace{height:100dvh}.top-right{gap:7px}.model{max-width:138px}.status{display:none}
 #messages{padding:24px 17px;gap:17px}.composer{padding:12px 12px 13px}.msg{gap:8px}.suggestions{grid-template-columns:1fr}.hero{padding:15px 4px}.disclaimer{font-size:9px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+/* Luồng tiến trình CVNSS4.0, câu trả lời Unicode đọc được, an toàn XSS. */
+.reasoning-panel{margin:6px 0 14px;border:1px solid #dce9f8;border-radius:14px;background:#f8fbff;overflow:hidden}
+.reasoning-panel summary{display:flex;align-items:center;gap:9px;list-style:none;cursor:pointer;padding:11px 13px;font-size:12px;font-weight:700;color:#315f94}
+.reasoning-panel summary::-webkit-details-marker{display:none}
+.reason-symbol{color:#159bb9;font-size:18px;line-height:1}
+.reason-status{margin-left:auto;color:#188566;border:1px solid #cfe9e1;background:#eaf8f2;border-radius:99px;padding:3px 9px;font-size:10px;white-space:nowrap}
+.reasoning-panel.streaming .reason-status{background:#e7f2ff;color:#286ba9;border-color:#d3e6ff;animation:bila-pulse 1.45s ease-in-out infinite}
+.reason-code{margin:0;background:#10243e;color:#9bdaf2;border-top:1px solid #dce7f5;padding:13px 15px;font:12px/1.8 Consolas,monospace;max-height:220px;overflow-y:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.pending-answer{font-style:italic;color:#8a99ac!important}
+.rich-answer{white-space:normal;line-height:1.8}
+.rich-answer p{margin:0 0 12px}.rich-answer p:last-child{margin-bottom:0}
+.rich-answer h2{font-size:17px;margin:17px 0 8px;line-height:1.45;color:#1b466e}
+.rich-answer h3{font-size:15px;margin:14px 0 7px;line-height:1.45;color:#285a83}
+.rich-answer ul,.rich-answer ol{padding-left:25px;margin:6px 0 14px}
+.rich-answer li{margin:6px 0;padding-left:3px}
+.rich-answer strong{font-weight:750;color:#163956}
+.rich-answer em{font-style:italic}
+.rich-answer code{font:12.5px/1.6 Consolas,monospace;background:#eaf1fb;color:#1b6790;border-radius:5px;padding:2px 5px;overflow-wrap:anywhere}
+.rich-answer pre{padding:13px 15px;border-radius:12px;background:#17283e;color:#e0eeff;overflow:auto;margin:10px 0 16px;white-space:pre;font:12px/1.7 Consolas,monospace}
+.rich-answer pre code{padding:0;background:transparent;color:inherit;overflow-wrap:normal}
+.rich-answer blockquote{border-left:3px solid #5d99e1;background:#f4f8ff;color:#456488;padding:6px 12px;margin:10px 0}
+.rich-answer a{color:#225eb9;text-decoration:underline;text-underline-offset:2px}
+.answer-table{max-width:100%;overflow-x:auto;margin:10px 0}
+.answer-table table{width:100%;border-collapse:collapse;font-size:12px}
+.answer-table th,.answer-table td{border:1px solid #dbe6f2;padding:9px 11px;text-align:left}
+.answer-table th{background:#edf4ff;color:#305781}
+@keyframes bila-pulse{50%{opacity:.6}}
+@media(max-width:600px){.reason-code{font-size:11px}.reasoning-panel summary{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.reasoning-panel.streaming .reason-status{animation:none}}
 </style><meta name="description" content="BilaBot · Trợ lý AI tiếng Việt với giao diện sáng CVNSS4.0, xử lý DeepSeek qua Cloudflare."><link rel="canonical" href="https://xulytiengviet.github.io/Bilabot2/"></head>
 <body><div class="app">
 <aside class="sidebar" id="sidebar">
@@ -90,7 +120,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 
 </aside>
 <main class="workspace">
-<header class="topbar"><div class="topinfo"><button class="btn" id="toggle-sidebar" aria-label="Mở danh sách hội thoại">☰</button> <b>Trợ lý Bila</b></div>
+<header class="topbar"><div class="topinfo"><button class="btn" id="toggle-sidebar" aria-label="Mở danh sách hội thoại">☰</button> <b>BilaBot</b></div>
 
 </header>
 <section id="messages" aria-live="polite"></section>
