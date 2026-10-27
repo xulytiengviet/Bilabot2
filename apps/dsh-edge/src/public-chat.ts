@@ -6,7 +6,7 @@ import { EdgeHttpError, readJsonObject } from './http.ts'
 import { publicChatHtml, publicChatJavascript } from './public-chat-page.ts'
 import { cvnssConverterSource } from './cvnss-converter-bundle.ts'
 import { PUBLIC_VISITOR_MAX_QUESTIONS, quotaCall } from './visitor-quota-core.ts'
-import { createThinkFilter, readAiStream, sseFrame } from './public-ai-stream.ts'
+import { createThinkFilter, createPublicTraceSplitter, readAiStream, sseFrame } from './public-ai-stream.ts'
 import type { PublicQuotaEnv } from './visitor-quota-core.ts'
 
 export interface PublicChatEnv extends PublicQuotaEnv {
@@ -191,7 +191,7 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
     }
     try {
       const prompt: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-        { role: 'system', content: 'Bạn là Trợ lý Bila, trả lời bằng tiếng Việt Unicode NFC, ngắn gọn, chính xác. CVNSS4.0 là hệ ký hiệu văn bản bổ trợ ở giao diện; không mô tả suy luận nội bộ của AI. Không hiển thị phần suy luận riêng tư.' },
+        { role: 'system', content: 'Bạn là BilaBot, trả lời rõ ràng bằng tiếng Việt Unicode NFC. Hãy đưa ra một bản TÓM TẮT PHƯƠNG PHÁP công khai, tối đa 3 bước ngắn, phù hợp chính xác với câu hỏi. Đây không phải suy luận nội bộ và không được giả vờ đã sử dụng công cụ hay tìm kiếm web. Sau phần suy luận riêng tư (nếu có), bắt buộc xuất dữ liệu theo dạng: <public_steps>\n- Mô tả bước 1 phù hợp câu hỏi.\n- Mô tả bước 2 phù hợp câu hỏi.\n- Mô tả bước 3 nếu cần.\n</public_steps><final_answer>\nCâu trả lời chính bằng tiếng Việt, có thể dùng Markdown.\n</final_answer>. Thay các câu mẫu bằng nội dung cụ thể từ câu hỏi, không lặp máy móc. Không được xuất chain-of-thought, không phát biểu đã kiểm chứng dữ liệu nếu chưa kiểm chứng.' },
         ...messages,
       ]
       if (request.headers.get('accept')?.includes('text/event-stream')) {
@@ -215,13 +215,18 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
       const rawAnswer = typeof reply === 'object' && reply !== null
         && 'response' in reply && typeof reply.response === 'string' ? reply.response : ''
       // The distill model may include internal <think> blocks; never display them.
-      const answer = rawAnswer.replace(/<think>[\s\S]*?<\/think>/giu, '')
+      const safeText = rawAnswer.replace(/<think>[\s\S]*?<\/think>/giu, '')
         .replace(/<think>[\s\S]*$/giu, '').trim()
+      const parser = createPublicTraceSplitter()
+      const first = parser.push(safeText)
+      const end = parser.finish()
+      const answer = (first.answer + end.answer).replace(/<\/final_answer>\s*$/iu, '').trim()
+      const trace = (first.trace + end.trace).trim().slice(0, 2400)
       if (!answer) throw new Error('Empty AI response')
       const committed = await quotaCall(env, request, 'finish', token, true)
       if (!committed.ok) throw new Error('Quota confirmation failed')
       return result({
-        ok: true, answer: answer.normalize('NFC'), model: PUBLIC_AI_MODEL,
+        ok: true, answer: answer.normalize('NFC'), trace: trace.normalize('NFC'), model: PUBLIC_AI_MODEL,
         remaining: committed.remaining,
         maxQuestionsPerIp: PUBLIC_VISITOR_MAX_QUESTIONS,
       })
@@ -266,22 +271,30 @@ function streamPublicAnswer(
     start(controller) {
       void (async () => {
         let answered = ''
+        let traceLength = 0
         const filter = createThinkFilter()
+        const parser = createPublicTraceSplitter()
+        const emit = (part: { trace: string; answer: string }) => {
+          if (part.trace && traceLength < 2400) {
+            const content = part.trace.slice(0, 2400 - traceLength)
+            traceLength += content.length
+            controller.enqueue(sseFrame({ type: 'trace_delta', text: content }))
+          }
+          if (part.answer) {
+            answered += part.answer
+            controller.enqueue(sseFrame({ type: 'delta', text: part.answer }))
+          }
+        }
         try {
-          controller.enqueue(sseFrame({ type: 'status', text: 'Bila đang soạn câu trả lời…' }))
+          controller.enqueue(sseFrame({ type: 'status', text: 'BilaBot đang phân tích nội dung câu hỏi…' }))
           for await (const raw of readAiStream(source)) {
             if (disconnected) throw new Error('Client disconnected')
             const safeText = filter.push(raw)
-            if (safeText) {
-              answered += safeText
-              controller.enqueue(sseFrame({ type: 'delta', text: safeText }))
-            }
+            if (safeText) emit(parser.push(safeText))
           }
           const tail = filter.finish()
-          if (tail) {
-            answered += tail
-            controller.enqueue(sseFrame({ type: 'delta', text: tail }))
-          }
+          if (tail) emit(parser.push(tail))
+          emit(parser.finish())
           if (!answered.trim()) throw new Error('Empty answer')
           const committed = await quotaCall(env, request, 'finish', token, true)
           if (!committed.ok) throw new Error('Quota commit did not succeed')
