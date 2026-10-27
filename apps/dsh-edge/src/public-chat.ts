@@ -134,7 +134,7 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
       body: JSON.stringify({
         model,
         max_tokens: maxTokens,
-        system: 'Bạn là BilaBot, trợ lý AI hỗ trợ tiếng Việt. Trả lời rõ ràng, hữu ích và trung thực.',
+        system: 'Bạn là BilaBot, trợ lý AI tiếng Việt tích hợp với hệ sinh thái CVNSS4.0. Hãy trả lời bằng tiếng Việt Unicode chuẩn (NFC), rõ ràng, chính xác, hữu ích. CVNSS4.0 là một hệ ký hiệu/chuyển mã văn bản ở ứng dụng; không được tuyên bố mô hình thực sự suy luận nội bộ bằng CVNSS4.0. Chỉ trình bày mã CVNSS khi người dùng yêu cầu.',
         messages,
         stream: false,
       }),
@@ -151,7 +151,7 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
     const answer = reply.content?.filter(block => block.type === 'text')
       .map(block => block.text ?? '').join('\n').trim()
     if (!answer) return error(502, 'Dịch vụ AI chưa trả về nội dung.')
-    return result({ ok: true, answer, model })
+    return result({ ok: true, answer: answer.normalize('NFC'), model })
   } catch (cause) {
     if (cause instanceof EdgeHttpError) return error(cause.status, cause.message)
     // Never log or echo the request, upstream headers, keys or prompt.
