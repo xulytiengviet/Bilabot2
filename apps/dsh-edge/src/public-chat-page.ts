@@ -6,7 +6,7 @@ export const publicChatHtml = `<!doctype html>
 <html lang="vi"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer"><meta name="theme-color" content="#f8fafc">
-<title>BilaBot · Trợ lý Bila</title>
+<title>BilaBot</title>
 <style>
 :root{color-scheme:light;--page:#f6f8fc;--paper:#fff;--ink:#19243c;--muted:#66758d;--line:#e4eaf3;--accent:#245cbd;--light:#eaf2ff;--cyan:#069aab;--shadow:0 14px 50px rgba(37,65,118,.045);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
 *{box-sizing:border-box}
@@ -83,7 +83,37 @@ button:disabled{opacity:.55;cursor:not-allowed}
 #toggle-sidebar{display:block}.topbar{min-height:68px;padding:11px 15px}.workspace{height:100dvh}.top-right{gap:7px}.model{max-width:138px}.status{display:none}
 #messages{padding:24px 17px;gap:17px}.composer{padding:12px 12px 13px}.msg{gap:8px}.suggestions{grid-template-columns:1fr}.hero{padding:15px 4px}.disclaimer{font-size:9px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
-</style></head>
+
+/* Luồng tiến trình CVNSS4.0, câu trả lời Unicode đọc được, an toàn XSS. */
+.reasoning-panel{margin:6px 0 14px;border:1px solid #dce9f8;border-radius:14px;background:#f8fbff;overflow:hidden}
+.reasoning-panel summary{display:flex;align-items:center;gap:9px;list-style:none;cursor:pointer;padding:11px 13px;font-size:12px;font-weight:700;color:#315f94}
+.reasoning-panel summary::-webkit-details-marker{display:none}
+.reason-symbol{color:#159bb9;font-size:18px;line-height:1}
+.reason-status{margin-left:auto;color:#188566;border:1px solid #cfe9e1;background:#eaf8f2;border-radius:99px;padding:3px 9px;font-size:10px;white-space:nowrap}
+.reasoning-panel.streaming .reason-status{background:#e7f2ff;color:#286ba9;border-color:#d3e6ff;animation:bila-pulse 1.45s ease-in-out infinite}
+.reason-code{margin:0;background:#10243e;color:#9bdaf2;border-top:1px solid #dce7f5;padding:13px 15px;font:12px/1.8 Consolas,monospace;max-height:220px;overflow-y:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.pending-answer{font-style:italic;color:#8a99ac!important}
+.rich-answer{white-space:normal;line-height:1.8}
+.rich-answer p{margin:0 0 12px}.rich-answer p:last-child{margin-bottom:0}
+.rich-answer h2{font-size:17px;margin:17px 0 8px;line-height:1.45;color:#1b466e}
+.rich-answer h3{font-size:15px;margin:14px 0 7px;line-height:1.45;color:#285a83}
+.rich-answer ul,.rich-answer ol{padding-left:25px;margin:6px 0 14px}
+.rich-answer li{margin:6px 0;padding-left:3px}
+.rich-answer strong{font-weight:750;color:#163956}
+.rich-answer em{font-style:italic}
+.rich-answer code{font:12.5px/1.6 Consolas,monospace;background:#eaf1fb;color:#1b6790;border-radius:5px;padding:2px 5px;overflow-wrap:anywhere}
+.rich-answer pre{padding:13px 15px;border-radius:12px;background:#17283e;color:#e0eeff;overflow:auto;margin:10px 0 16px;white-space:pre;font:12px/1.7 Consolas,monospace}
+.rich-answer pre code{padding:0;background:transparent;color:inherit;overflow-wrap:normal}
+.rich-answer blockquote{border-left:3px solid #5d99e1;background:#f4f8ff;color:#456488;padding:6px 12px;margin:10px 0}
+.rich-answer a{color:#225eb9;text-decoration:underline;text-underline-offset:2px}
+.answer-table{max-width:100%;overflow-x:auto;margin:10px 0}
+.answer-table table{width:100%;border-collapse:collapse;font-size:12px}
+.answer-table th,.answer-table td{border:1px solid #dbe6f2;padding:9px 11px;text-align:left}
+.answer-table th{background:#edf4ff;color:#305781}
+@keyframes bila-pulse{50%{opacity:.6}}
+@media(max-width:600px){.reason-code{font-size:11px}.reasoning-panel summary{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.reasoning-panel.streaming .reason-status{animation:none}}
+</style><meta name="description" content="BilaBot · Trợ lý AI tiếng Việt với giao diện sáng CVNSS4.0, xử lý DeepSeek qua Cloudflare."><link rel="canonical" href="https://xulytiengviet.github.io/Bilabot2/"></head>
 <body><div class="app">
 <aside class="sidebar" id="sidebar">
   <div class="brand"><div class="brandmark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M32 13C22 4 8 11 11 24c-8 6-7 17 1 21-1 12 14 17 20 6 6 11 21 6 20-6 8-4 9-15 1-21C56 11 42 4 32 13Z"/><path d="M32 13v38M19 23l7 6-6 8M45 23l-7 6 6 8"/><circle cx="26" cy="29" r="2" fill="currentColor" stroke="none"/><circle cx="38" cy="29" r="2" fill="currentColor" stroke="none"/></svg></div>
@@ -94,7 +124,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 
 </aside>
 <main class="workspace">
-<header class="topbar"><div class="topinfo"><button class="btn" id="toggle-sidebar" aria-label="Mở danh sách hội thoại">☰</button> <b>Trợ lý Bila</b></div>
+<header class="topbar"><div class="topinfo"><button class="btn" id="toggle-sidebar" aria-label="Mở danh sách hội thoại">☰</button> <b>BilaBot</b></div>
 
 </header>
 <section id="messages" aria-live="polite"></section>
@@ -115,6 +145,119 @@ export const publicChatJavascript = String.raw`'use strict';
   const converter = window.CVNSSConverter;
   const version = converter && converter.VERSION === '5.0.0-audit-safe';
   const validMessage = m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string';
+
+  // Chỉ diễn giải tiến trình xử lý thực tế, không mô phỏng chain-of-thought.
+  const traceStart = 'Đã tiếp nhận câu hỏi.\nĐã chuẩn bị ngữ cảnh hội thoại.\nĐang chờ Cloudflare Workers AI trả lời.';
+  const traceDone = 'Đã tiếp nhận câu hỏi.\nĐã gửi yêu cầu tới Cloudflare Workers AI.\nĐã nhận câu trả lời từ mô hình.\nĐã hoàn thiện nội dung tiếng Việt Unicode.';
+  const cleanAnswer = raw => String(raw || '').replace(/<think>[\s\S]*?<\/think>/giu, '')
+    .replace(/<think>[\s\S]*$/giu, '').trim().normalize('NFC');
+  function appendInline(target, raw) {
+    const value = String(raw).replace(/\\([*#_])/g, '$1');
+    const rx = /(\*\*[^*\n]+?\*\*|__[^_\n]+?__|\x60[^\x60\n]+\x60|\*[^*\n]+?\*|\[[^\]\n]+\]\(https?:\/\/[^\s)]+\))/g;
+    let last = 0, match;
+    const plain = str => target.append(document.createTextNode(str.replace(/\*\*/g, '').replace(/__+/g, '')));
+    while ((match = rx.exec(value))) {
+      if (match.index > last) plain(value.slice(last, match.index));
+      const token = match[0];
+      let node;
+      if (token.startsWith('**') || token.startsWith('__')) {
+        node = document.createElement('strong'); node.textContent = token.slice(2, -2);
+      } else if (token.charCodeAt(0) === 96) {
+        node = document.createElement('code'); node.textContent = token.slice(1, -1);
+      } else if (token.startsWith('*')) {
+        node = document.createElement('em'); node.textContent = token.slice(1, -1);
+      } else {
+        const matchLink = /^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/.exec(token);
+        if (matchLink) {
+          node = document.createElement('a'); node.href = matchLink[2]; node.target = '_blank';
+          node.rel = 'noopener noreferrer'; node.textContent = matchLink[1];
+        } else node = document.createTextNode(token);
+      }
+      target.append(node); last = rx.lastIndex;
+    }
+    if (last < value.length) plain(value.slice(last));
+  }
+  function renderAnswer(target, raw) {
+    target.replaceChildren();
+    const lines = cleanAnswer(raw).replace(/\r\n?/g, '\n').split('\n');
+    const fence = String.fromCharCode(96).repeat(3);
+    let para = [], list = null, inCode = false, codeLines = [];
+    const flush = () => {
+      if (!para.length) return;
+      const p = document.createElement('p'); appendInline(p, para.join(' '));
+      target.append(p); para = [];
+    };
+    const flushCode = () => {
+      const pre = document.createElement('pre'), code = document.createElement('code');
+      code.textContent = codeLines.join('\n'); pre.append(code); target.append(pre);
+      codeLines = [];
+    };
+    const cells = text => text.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(x => x.trim());
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i], trimmed = line.trim();
+      if (trimmed.startsWith(fence)) {
+        if (inCode) { flushCode(); inCode = false; }
+        else { flush(); list = null; inCode = true; }
+        continue;
+      }
+      if (inCode) { codeLines.push(line); continue; }
+      if (!trimmed) { flush(); list = null; continue; }
+      if (trimmed.startsWith('|') && i + 1 < lines.length &&
+          /^\s*\|?\s*:?-{3,}:?[\s|:-]*$/.test(lines[i + 1])) {
+        flush(); list = null;
+        const table = document.createElement('table'), head = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        for (const cell of cells(line)) {
+          const th = document.createElement('th'); appendInline(th, cell); headRow.append(th);
+        }
+        head.append(headRow); table.append(head); i++;
+        const tbody = document.createElement('tbody');
+        while (i + 1 < lines.length && lines[i + 1].trim().startsWith('|')) {
+          i++; const tr = document.createElement('tr');
+          for (const cell of cells(lines[i])) {
+            const td = document.createElement('td'); appendInline(td, cell); tr.append(td);
+          }
+          tbody.append(tr);
+        }
+        table.append(tbody);
+        const wrap = document.createElement('div'); wrap.className = 'answer-table';
+        wrap.append(table); target.append(wrap); continue;
+      }
+      const heading = /^\s{0,3}(#{1,6})\s*(.+?)\s*#*\s*$/.exec(line);
+      if (heading) {
+        flush(); list = null;
+        const h = document.createElement(heading[1].length < 3 ? 'h2' : 'h3');
+        appendInline(h, heading[2]); target.append(h); continue;
+      }
+      const ul = /^\s*[-*+]\s+(.+)$/.exec(line), ol = /^\s*(\d+)[.)]\s+(.+)$/.exec(line);
+      if (ul || ol) {
+        flush();
+        const tag = ol ? 'ol' : 'ul';
+        if (!list || list.tagName.toLowerCase() !== tag) {
+          list = document.createElement(tag);
+          if (ol && Number(ol[1]) > 1) list.start = Number(ol[1]);
+          target.append(list);
+        }
+        const li = document.createElement('li'); appendInline(li, ul ? ul[1] : ol[2]); list.append(li);
+        continue;
+      }
+      if (/^\s*>\s?/.test(line)) {
+        flush(); list = null; const q = document.createElement('blockquote');
+        appendInline(q, line.replace(/^\s*>\s?/, '')); target.append(q); continue;
+      }
+      list = null; para.push(trimmed);
+    }
+    flush();
+    if (inCode) flushCode();
+  }
+  function updateProgress(card, message, seconds) {
+    if (!card || !card.isConnected) return;
+    const status = card.querySelector('.reason-status');
+    const content = card.querySelector('.reason-code');
+    if (status) status.textContent = message;
+    if (content) content.textContent = cvssPreview(traceStart + (seconds == null ? '' : '\nThời gian xử lý: ' + seconds + ' giây.'));
+  }
+
   let chats = [], current = '', busy = false;
   function showNotice(message) {
     const notice = $('notice');
@@ -177,26 +320,29 @@ export const publicChatJavascript = String.raw`'use strict';
     else avatar.textContent = '●';
     const body = document.createElement('div'); body.className = 'msg-body';
     const meta = document.createElement('div'); meta.className = 'msg-meta';
-    meta.textContent = msg.role === 'user' ? 'Bạn' : 'BilaBot · Unicode tiếng Việt';
-    const text = document.createElement('div'); text.className = 'msg-text';
-    text.textContent = msg.content.normalize('NFC');
-    body.append(meta, text);
-    if (msg.role === 'assistant') {
-      const details = document.createElement('details'); details.className = 'cvnss-detail';
+    meta.textContent = msg.role === 'user' ? 'Bạn' : 'BilaBot';
+    body.append(meta);
+    if (msg.role === 'assistant' && (msg.pending || msg.trace)) {
+      const details = document.createElement('details');
+      details.className = 'reasoning-panel' + (msg.pending ? ' streaming' : ' complete');
+      details.open = Boolean(msg.pending);
       const summary = document.createElement('summary');
-      summary.textContent = '◈ Xem cách mã hóa câu trả lời bằng CVNSS4.0';
-      const pre = document.createElement('pre');
-      const hint = document.createElement('small');
-      hint.textContent = 'Bản mã văn bản từ CVNSS4.0 Converter v5.0.0-audit-safe; không phải suy luận nội bộ của DeepSeek.';
-      details.append(summary, pre, hint);
-      details.addEventListener('toggle', () => {
-        if (details.open && !pre.dataset.ready) {
-          pre.textContent = cvssPreview(msg.content);
-          pre.dataset.ready = '1';
-        }
-      });
-      body.append(details);
+      const symbol = document.createElement('span'); symbol.className = 'reason-symbol'; symbol.textContent = '◈';
+      const heading = document.createElement('span'); heading.textContent = 'Tiến trình AI · CVNSS4.0';
+      const status = document.createElement('span'); status.className = 'reason-status';
+      status.textContent = msg.pending ? 'Đang xử lý' : 'Hoàn tất';
+      summary.append(symbol, heading, status);
+      const pre = document.createElement('pre'); pre.className = 'reason-code';
+      pre.textContent = cvssPreview(msg.trace || traceStart);
+      details.append(summary, pre); body.append(details);
     }
+    const text = document.createElement('div');
+    text.className = 'msg-text' + (msg.role === 'assistant' ? ' rich-answer' : '');
+    if (msg.pending) {
+      text.classList.add('pending-answer'); text.textContent = 'BilaBot đang chuẩn bị câu trả lời…';
+    } else if (msg.role === 'assistant') renderAnswer(text, msg.content);
+    else text.textContent = msg.content.normalize('NFC');
+    body.append(text);
     section.append(avatar, body); return section;
   }
   function render() {
@@ -230,9 +376,9 @@ export const publicChatJavascript = String.raw`'use strict';
     }
     let total = a.reduce((n, m) => n + m.content.length, 0);
     while (total > 26000 && a.length > 1) total -= a.shift().content.length;
-    return a;
+    return a.map(m => ({ role: m.role, content: m.content }));
   }
-  async function readAnswer(response) {
+  async function readAnswer(response, card) {
     const kind = response.headers.get('content-type') || '';
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
@@ -245,10 +391,8 @@ export const publicChatJavascript = String.raw`'use strict';
       return data;
     }
     if (!response.body) throw new Error('Không nhận được luồng trả lời.');
-    const card = createMessage({ role: 'assistant', content: '' });
     const label = card.querySelector('.msg-text');
-    label.textContent = 'Bila đang kết nối tới AI…';
-    $('messages').append(card);
+    updateProgress(card, 'Đang nhận dữ liệu');
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '', draft = '', complete = false, remaining;
@@ -268,10 +412,11 @@ export const publicChatJavascript = String.raw`'use strict';
           if (!source) continue;
           let event;
           try { event = JSON.parse(source); } catch { continue; }
-          if (event.type === 'status' && !draft) label.textContent = event.text || 'Bila đang xử lý…';
+          if (event.type === 'status' && !draft) updateProgress(card, 'AI đang phản hồi');
           if (event.type === 'delta' && typeof event.text === 'string') {
             draft += event.text;
-            label.textContent = draft.normalize('NFC');
+            renderAnswer(label, draft);
+            updateProgress(card, 'Đang nhận câu trả lời');
             $('messages').scrollTop = $('messages').scrollHeight;
           }
           if (event.type === 'error') throw new Error(event.message || 'Yêu cầu thất bại.');
@@ -313,18 +458,26 @@ export const publicChatJavascript = String.raw`'use strict';
     c.messages.push(item);
     if (c.messages.length === 1) c.title = prompt.slice(0, 55);
     $('prompt').value = ''; save(); render(); lock(true);
+    const live = createMessage({ role: 'assistant', content: '', pending: true, trace: traceStart });
+    $('messages').append(live);
+    $('messages').scrollTop = $('messages').scrollHeight;
+    const started = Date.now();
+    const progressTimer = setInterval(() => {
+      const seconds = Math.floor((Date.now() - started) / 1000);
+      updateProgress(live, 'Đang xử lý · ' + seconds + ' giây', seconds);
+    }, 1000);
     const controller = new AbortController();
     // Always recover the composer, even if a network path never completes.
     const timeout = setTimeout(() => controller.abort(), 90000);
     try {
-      const response = await fetch('/api/public/chat', {
+      const response = await fetch('https://bilabot2.bilabot-cvnss4-71bd4651.workers.dev/api/public/chat', {
         method: 'POST', credentials: 'omit',
         headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
         body: JSON.stringify({ messages: boundedContext(c.messages) }),
         signal: controller.signal
       });
-      const data = await readAnswer(response);
-      c.messages.push({ role: 'assistant', content: String(data.answer).normalize('NFC') });
+      const data = await readAnswer(response, live);
+      c.messages.push({ role: 'assistant', content: cleanAnswer(data.answer), trace: traceDone });
       showNotice('');
       if (typeof data.remaining === 'number') {
         $('quota-info').textContent = data.remaining > 0
@@ -344,6 +497,7 @@ export const publicChatJavascript = String.raw`'use strict';
         : error instanceof Error ? error.message : 'Yêu cầu thất bại';
       showNotice(msg);
     } finally {
+      clearInterval(progressTimer);
       clearTimeout(timeout);
       lock(false);
       $('prompt').focus();
@@ -351,7 +505,7 @@ export const publicChatJavascript = String.raw`'use strict';
   });
   if (chats.length) { current = chats[chats.length - 1].id; render(); }
   else newChat();
-  fetch('/api/public/config', { credentials: 'omit' }).then(r => r.json()).then(data => {
+  fetch('https://bilabot2.bilabot-cvnss4-71bd4651.workers.dev/api/public/config', { credentials: 'omit' }).then(r => r.json()).then(data => {
     if (!data.ready) showNotice('Trợ lý tạm thời chưa sẵn sàng. Vui lòng thử lại sau.');
   }).catch(() => { showNotice('Không thể kết nối dịch vụ. Vui lòng thử lại sau.'); });
 })();
