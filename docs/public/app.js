@@ -204,7 +204,7 @@
     const text = document.createElement('div');
     text.className = 'msg-text' + (msg.role === 'assistant' ? ' rich-answer' : '');
     if (msg.pending) {
-      text.classList.add('pending-answer'); text.textContent = 'BilaBot đang chuẩn bị câu trả lời…';
+      text.classList.add('pending-answer'); text.textContent = ''; text.hidden = true;
     } else if (msg.role === 'assistant') renderAnswer(text, msg.content);
     else text.textContent = msg.content.normalize('NFC');
     body.append(text);
@@ -291,6 +291,7 @@
             $('messages').scrollTop = $('messages').scrollHeight;
           }
           if (event.type === 'delta' && typeof event.text === 'string') {
+            label.hidden = false;
             draft += event.text;
             renderAnswer(label, draft);
             updateProgress(card, 'Đang nhận câu trả lời');
