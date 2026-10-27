@@ -5,7 +5,7 @@
 export const publicChatHtml = `<!doctype html>
 <html lang="vi"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="no-referrer"><meta name="application-version" content="20261027-public-reason-v4"><meta name="theme-color" content="#f8fafc">
+<meta name="referrer" content="no-referrer"><meta name="application-version" content="20261027-public-reason-v5"><meta name="theme-color" content="#f8fafc">
 <title>BilaBot</title>
 <style>
 :root{color-scheme:light;--page:#f6f8fc;--paper:#fff;--ink:#19243c;--muted:#66758d;--line:#e4eaf3;--accent:#245cbd;--light:#eaf2ff;--cyan:#069aab;--shadow:0 14px 50px rgba(37,65,118,.045);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
@@ -134,7 +134,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 </form><p id="notice" class="notice" role="status" aria-live="polite" hidden></p><p class="disclaimer">Tối đa 10 câu hỏi tổng cộng cho mỗi IP · Tối đa 5 yêu cầu/phút. Đừng gửi dữ liệu nhạy cảm.</p><p class="quota-info" id="quota-info" aria-live="polite" hidden></p></div>
 <footer class="credits">@2026, <strong>Trần Tư Bình</strong> và <strong>Kiều Trường Lâm</strong> phát kiến CVNSS4.0 <span class="credit-sep">·</span> Nguồn: <strong>Long Ngo</strong> phát triển · Giấy phép MIT</footer>
 </main></div>
-<script src="/public/cvnss.js?v=20261027-public-reason-v4" defer></script><script src="/public/app.js?v=20261027-public-reason-v4" defer></script>
+<script src="/public/cvnss.js?v=20261027-public-reason-v5" defer></script><script src="/public/app.js?v=20261027-public-reason-v5" defer></script>
 </body></html>`;
 
 export const publicChatJavascript = String.raw`'use strict';
@@ -343,7 +343,7 @@ export const publicChatJavascript = String.raw`'use strict';
     const text = document.createElement('div');
     text.className = 'msg-text' + (msg.role === 'assistant' ? ' rich-answer' : '');
     if (msg.pending) {
-      text.classList.add('pending-answer'); text.textContent = 'BilaBot đang chuẩn bị câu trả lời…';
+      text.classList.add('pending-answer'); text.textContent = ''; text.hidden = true;
     } else if (msg.role === 'assistant') renderAnswer(text, msg.content);
     else text.textContent = msg.content.normalize('NFC');
     body.append(text);
@@ -430,6 +430,7 @@ export const publicChatJavascript = String.raw`'use strict';
             $('messages').scrollTop = $('messages').scrollHeight;
           }
           if (event.type === 'delta' && typeof event.text === 'string') {
+            label.hidden = false;
             draft += event.text;
             renderAnswer(label, draft);
             updateProgress(card, 'Đang nhận câu trả lời');
