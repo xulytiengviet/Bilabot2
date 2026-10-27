@@ -66,6 +66,11 @@ export async function handleHoneypotRequest(request: Request, env: HoneypotEnv):
       'referrer-policy': 'no-referrer',
     },
   })
+  // Prevent an unrelated website from forcing an innocent visitor's IP into
+  // cooldown by embedding a hidden image or cross-site fetch to a bait URL.
+  if (request.headers.get('sec-fetch-site') === 'cross-site') return response
+  const destination = request.headers.get('sec-fetch-dest')
+  if (destination && !['document', 'empty'].includes(destination)) return response
   if (!env.PUBLIC_CHAT_RATE_LIMITER || !env.DEEPSEEK_API_KEY?.trim()) return response
   try {
     const key = await privateRateLimitKey(request, env.DEEPSEEK_API_KEY)
