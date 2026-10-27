@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { runInNewContext } from 'node:vm'
 import { handlePublicChatRoute, isPublicChatEnabled, publicMaxTokens, validatePublicMessages } from '../src/public-chat.ts'
+import { cvnssConverterSource } from '../src/cvnss-converter-bundle.ts'
+import { publicChatHtml, publicChatJavascript } from '../src/public-chat-page.ts'
 
 describe('anonymous chat boundary', () => {
   it('is opt-in', () => {
@@ -25,6 +28,29 @@ describe('anonymous chat boundary', () => {
     expect(response.status).toBe(200)
     expect(await response.text()).toContain('BilaBot')
     expect(response.headers.get('content-security-policy')).toContain("default-src 'none'")
+  })
+  it('serves a clean light Vietnamese interface and local converter without leaking keys', async () => {
+    expect(publicChatHtml).toContain('color-scheme:light')
+    expect(publicChatHtml).toContain('Bộ não CVNSS4.0')
+    expect(publicChatHtml).toContain('/public/cvnss.js')
+    expect(publicChatJavascript).toContain('localStorage')
+    expect(publicChatJavascript).toContain('cvssPreview')
+    expect(publicChatJavascript).toContain("fetch('/api/public/chat'")
+    expect(publicChatHtml + publicChatJavascript).not.toMatch(/sk-or-v1-|api\.openrouter\.ai/)
+    const response = await handlePublicChatRoute(new Request('https://test.example/public/cvnss.js'), {})
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('text/javascript')
+    expect(await response.text()).toBe(cvnssConverterSource)
+    expect(cvnssConverterSource).toContain('5.0.0-audit-safe')
+  })
+  it('passes the audited CVNSS4.0 converter self-test independently', () => {
+    const context: { CVNSSConverter?: {
+      selfTest: () => { ok: boolean; failures: unknown[] };
+      fromCqn: (input: string) => { cvss: string };
+    } } = {}
+    runInNewContext(cvnssConverterSource, context)
+    expect(context.CVNSSConverter?.selfTest()).toMatchObject({ ok: true, failures: [] })
+    expect(context.CVNSSConverter?.fromCqn('Tôi yêu tiếng Việt.').cvss).toBe('Toiy iwy tizb Vidf.')
   })
   it('rejects cross-origin and does not call upstream', async () => {
     const response = await handlePublicChatRoute(new Request('https://test.example/api/public/chat', {

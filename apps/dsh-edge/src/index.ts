@@ -53,7 +53,7 @@ export default {
 
     try {
       const url = new URL(request.url)
-      if (isPublicChatEnabled(env) && (url.pathname === '/' || url.pathname === '/public' || url.pathname.startsWith('/api/public/') || url.pathname === '/public/app.js')) {
+      if (isPublicChatEnabled(env) && (url.pathname === '/' || url.pathname === '/public' || url.pathname.startsWith('/api/public/') || url.pathname.startsWith('/public/'))) {
         return await handlePublicChatRoute(request, env)
       }
       const auth = resolveOwnerAuthConfig(env.DSH_EDGE_ACCESS_KEY)

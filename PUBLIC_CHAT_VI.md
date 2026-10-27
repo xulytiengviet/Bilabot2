@@ -36,3 +36,14 @@ Giới hạn dùng Workers rate limiting mang tính **ước lượng theo vị 
 ## Giới hạn truy cập dashboard
 
 Có quyền xem Dashboard Cloudflare trên máy cá nhân **không tự động cho phép tác nhân ChatGPT trong chat gọi API**. Cần chạy Wrangler bằng máy đã đăng nhập (`npx wrangler login`) hoặc một công cụ có quyền Worker deployment và secrets. Đừng gửi DeepSeek key hay Owner key trong hội thoại; điền trực tiếp trong Cloudflare Dashboard > Workers & Pages > dsh-edge > Settings > Variables and Secrets > Add > Secret > Deploy. Tên secrets: `DEEPSEEK_API_KEY`, `DSH_EDGE_ACCESS_KEY`. Bản deploy không chứa các giá trị này.
+
+## Giao diện sáng và biểu tượng CVNSS4.0
+
+- Giao diện BilaBot mặc định sáng, tiếng Việt, thân thiện điện thoại; xây theo bố cục mẫu `Bilabot.html` do chủ website cung cấp, nhưng **không** sao chép khóa OpenRouter có trong HTML mẫu.
+- Biểu tượng bộ não **CVNSS4.0** mang ý nghĩa nhận diện. Engine sinh câu trả lời thực tế vẫn là **DeepSeek**, dùng `DEEPSEEK_MODEL` trong cấu hình Cloudflare và secret `DEEPSEEK_API_KEY`.
+- Câu hỏi gửi tới DeepSeek bằng Unicode; câu trả lời hiển thị chuẩn Unicode NFC. Có thể mở **Xem cách mã hóa câu trả lời bằng CVNSS4.0** để hiển thị cách biểu diễn văn bản bằng bản converter v5.0.0-audit-safe; **không phải** suy nghĩ nội bộ/chain-of-thought của mô hình.
+- Converter nguồn gốc từ tệp đính kèm `cvnss4_0_converter.pro.v5_0.audit_safe`, selfTest đạt 23 bài kiểm tra. Mã chuyển đổi được phục vụ từ `/public/cvnss.js` cùng origin và chạy ở trình duyệt.
+- Phần chữ CVNSS4.0 có trường hợp mơ hồ đảo ngược, nên không khẳng định song ánh với mọi chuỗi tiếng Việt. Giữ câu trả lời gốc Unicode làm dữ liệu chính.
+- Trình duyệt chỉ gọi `GET /api/public/config` để lấy tên model và trạng thái key (không có key), `POST /api/public/chat` để sinh câu trả lời. Không gọi OpenRouter hoặc lưu câu hỏi trên DB ứng dụng.
+- Quyền quản trị model/key nằm tại **Cloudflare > Workers & Pages > bilabot2 > Settings > Variables and Secrets**. Các route quản trị Harness tại `/login` và `/owner` vẫn riêng tư.
+- Nếu trước đây đã sử dụng HTML mẫu công khai, hãy **revoke/rotate OpenRouter key** cũ vì HTML chứa khóa trực tiếp; tuyệt đối không dùng lại khóa đó ở Cloudflare.

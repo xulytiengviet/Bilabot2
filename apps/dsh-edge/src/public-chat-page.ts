@@ -1,111 +1,267 @@
-/** Self-contained Vietnamese public chat. The server never receives local saved drafts/history
- * except the bounded context that the user explicitly submits to DeepSeek.
+/** Vietnamese, minimal light-theme public BilaBot.
+ * No API credentials or model editing controls are delivered to the browser.
+ * Static markup/scripts only; history remains in the user's browser.
  */
 export const publicChatHtml = `<!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="no-referrer"><title>BilaBot · Trợ lý AI tiếng Việt</title>
+<html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="theme-color" content="#f8fafc">
+<title>BilaBot · Bộ não CVNSS4.0</title>
 <style>
-:root{color-scheme:dark;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:#090e1e;color:#e9efff}
-*{box-sizing:border-box}body{margin:0}button,textarea{font:inherit}button{cursor:pointer}
-.shell{max-width:1120px;margin:auto;min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr);gap:0;background:#0d1427;border-inline:1px solid #26334d}
-aside{background:#0c1222;border-right:1px solid #24314c;padding:22px 14px;display:flex;flex-direction:column;gap:16px}
-.brand{font-size:23px;font-weight:780;color:#d4e6ff}.brand b{color:#7bbaff}
-.sub,.privacy,.foot{font-size:12px;color:#95a6c3}
-button{background:#1c2a46;color:#e6edff;border:1px solid #334467;border-radius:11px;padding:10px 13px}
-button:hover{background:#2c3b5b}button:focus-visible,textarea:focus-visible{outline:2px solid #75adfa;outline-offset:2px}
-.primary{background:#2264d0;border-color:#3678e2;color:#fff}.danger{color:#ffc1c1}
-.history{display:grid;gap:7px;overflow:auto;max-height:50vh}.history button{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.history .selected{border-color:#6298ec;background:#1f355c}
-main{min-width:0;display:flex;flex-direction:column;height:100vh}
-header{padding:17px 25px;border-bottom:1px solid #26334d;display:flex;justify-content:space-between;align-items:center;gap:12px}
-header strong{font-size:17px}.online{font-size:12px;color:#80c7ab}
-#messages{flex:1;overflow:auto;padding:28px clamp(15px,5vw,65px);display:flex;flex-direction:column;gap:18px}
-.bubble{max-width:85%;padding:15px 18px;border:1px solid #2a3a56;border-radius:18px;white-space:pre-wrap;overflow-wrap:anywhere}
-.bubble.user{align-self:flex-end;background:#194988;border-color:#2b69ad}.bubble.assistant{align-self:flex-start;background:#172139}
-.welcome{text-align:center;margin:auto;color:#a9bedb}.welcome h1{color:#edf4ff}
-.composer{padding:14px clamp(15px,5vw,65px) 24px;border-top:1px solid #26334d}
-textarea{width:100%;min-height:85px;max-height:220px;resize:vertical;background:#101c33;color:#f2f6ff;border:1px solid #395074;border-radius:14px;padding:13px}
-.actions{display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:9px}
-#send{min-width:100px}.tools{display:flex;flex-wrap:wrap;gap:8px}.tools button{font-size:12px;padding:7px 9px}
-@media(max-width:760px){.shell{display:block}aside{padding:9px 14px;border-right:0;border-bottom:1px solid #26334d;gap:8px}
-aside .history,aside .privacy{display:none}.brand{font-size:18px}main{height:calc(100dvh - 98px)}
-header{padding:10px 14px}#messages{padding:17px 12px}.bubble{max-width:95%}.composer{padding:12px}}
-</style></head><body><div class="shell">
-<aside><div><div class="brand">✦ <b>Bila</b>Bot</div><div class="sub">Thử nghiệm AI công khai · Tiếng Việt</div></div>
-<button id="new" class="primary">＋ Cuộc trò chuyện mới</button>
-<div class="sub">Lịch sử trên thiết bị này</div><nav id="history" class="history" aria-label="Lịch sử trò chuyện"></nav>
-<div class="privacy">🔒 Không đăng nhập. Nhật ký chỉ lưu trong trình duyệt. Nội dung gửi để trả lời sẽ được xử lý bởi DeepSeek; không nhập dữ liệu nhạy cảm.</div>
-</aside><main><header><div><strong>BilaBot · Trò chuyện AI</strong><div id="status" class="online">Đang kiểm tra cấu hình…</div></div><span class="sub" id="model"></span></header>
-<section id="messages" aria-live="polite"><div class="welcome"><h1>Xin chào! 👋</h1><p>Hãy gửi câu hỏi để bắt đầu trò chuyện bằng tiếng Việt.</p><p class="sub">Dùng chung mô hình AI do chủ website cấu hình.</p></div></section>
-<div class="composer"><form id="chat-form"><label class="sub" for="prompt">Tin nhắn của bạn</label>
-<textarea id="prompt" maxlength="6000" placeholder="Nhập câu hỏi của bạn… (Enter để gửi, Shift+Enter để xuống dòng)" required></textarea>
-<div class="actions"><div class="tools"><button type="button" id="export">Xuất JSON</button><button type="button" id="clear" class="danger">Xóa lịch sử</button></div>
-<button class="primary" id="send" type="submit">Gửi ↗</button></div></form><div class="foot">Dữ liệu trong trình duyệt có thể bị xóa khi dọn bộ nhớ hoặc ở chế độ riêng tư.</div></div>
-</main></div><script src="/public/app.js" defer></script></body></html>`
+:root{color-scheme:light;--page:#f6f8fc;--paper:#fff;--ink:#19243c;--muted:#66758d;--line:#e4eaf3;--accent:#245cbd;--light:#eaf2ff;--cyan:#069aab;--shadow:0 14px 50px rgba(37,65,118,.045);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink)}button,textarea{font:inherit}button{cursor:pointer}
+button:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #93b9ff;outline-offset:2px}
+button:disabled{opacity:.55;cursor:not-allowed}
+.app{display:grid;grid-template-columns:268px minmax(0,1fr);min-height:100dvh;max-width:1536px;margin:auto;background:#fff;box-shadow:var(--shadow)}
+.sidebar{background:#f8faff;border-right:1px solid var(--line);display:flex;flex-direction:column;padding:23px 15px 17px;gap:22px;min-width:0}
+.brand{display:flex;gap:11px;align-items:center;padding:0 9px}
+.brandmark{height:42px;width:42px;display:grid;place-items:center;border:1px solid #cae1fb;border-radius:15px;background:linear-gradient(135deg,#e7f3ff,#eff7ff);color:var(--accent)}
+.brandmark svg{width:27px;height:27px}
+.brandtext{line-height:1.24}.brandtext b{font-weight:800;font-size:20px;letter-spacing:-.6px}.brandtext span{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.sectionlabel{text-transform:uppercase;font-size:10px;font-weight:750;letter-spacing:.12em;color:#8493aa;padding:0 10px}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:12px;padding:10px 13px;font-weight:600;transition:background .16s,border-color .16s}
+.btn:hover{background:#eff5ff;border-color:#b5cdec}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:white}.btn.primary:hover{background:#194b9e}
+.create{width:100%;text-align:left;display:flex;align-items:center;gap:9px}
+.history{overflow:auto;display:grid;gap:5px;align-content:start;min-height:0;max-height:37vh}
+.history button{background:transparent;border:1px solid transparent;text-align:left;color:#53647f;padding:10px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:10px}
+.history button:hover{background:#eff4fe}.history button.active{background:#e8f0fd;border-color:#d5e5fb;color:#2157b2;font-weight:650}
+.sidebar-end{margin-top:auto;display:grid;gap:11px}
+.meta-panel{border:1px solid #e3ebf7;background:#fff;border-radius:15px;padding:13px 14px}
+.metalabel{font-weight:700;font-size:12px;margin-bottom:7px;color:#334766}
+.pipeline{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:10.5px;font-weight:700;color:#37649d}
+.pipeline span{padding:4px 7px;border-radius:7px;background:#eff5fd}
+.note{font-size:11px;color:var(--muted);line-height:1.6}
+.workspace{min-width:0;display:flex;flex-direction:column;height:100dvh}
+.topbar{min-height:77px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px clamp(18px,3vw,40px);background:#fff}
+.topinfo{min-width:0}.topinfo b{font-size:15px}.topinfo p{font-size:11.5px;margin:3px 0 0;color:var(--muted)}
+.top-right{display:flex;align-items:center;gap:12px;min-width:0}
+.model{font-size:11px;color:#315482;background:#f0f5fc;padding:7px 10px;border:1px solid #e0eaf8;border-radius:99px;white-space:nowrap;max-width:205px;overflow:hidden;text-overflow:ellipsis}
+.status{display:flex;gap:6px;align-items:center;font-size:11.5px;color:#32705e;white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:#2cb895;flex-shrink:0}
+#toggle-sidebar{display:none}
+#messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:23px;padding:26px clamp(18px,5.5vw,90px);scroll-behavior:smooth}
+.hero{max-width:580px;margin:auto;text-align:center;display:grid;justify-items:center;gap:12px;padding:28px 5px}
+.heroicon{width:86px;height:86px;display:grid;place-items:center;border-radius:28px;border:1px solid #d9e8ff;background:radial-gradient(circle at 20% 20%,#fff,#eaf4ff);box-shadow:0 12px 30px #dfeafa88}
+.heroicon svg{width:62px;height:62px;color:#2b72c5}
+.hero h1{font-size:clamp(23px,3.5vw,32px);line-height:1.25;letter-spacing:-1px;margin:5px 0 0}
+.hero p{font-size:14px;color:var(--muted);margin:0;max-width:440px}
+.hero .sublabel{font-size:11.5px;font-weight:700;color:#3570bd;letter-spacing:.08em}
+.suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;width:100%;margin-top:17px}
+.suggestions button{padding:12px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:13px;font-size:12px;color:#425874}
+.suggestions button:hover{border-color:#91b8f5;background:#f8fbff}
+.msg{max-width:860px;width:100%;display:flex;gap:12px;align-self:center;align-items:flex-start}
+.avatar{width:32px;height:32px;display:grid;place-items:center;border-radius:11px;background:#eaf3ff;border:1px solid #d8e8ff;color:#2b65b4;flex:0 0 auto;margin-top:2px}
+.avatar svg{width:20px;height:20px}.msg.user .avatar{color:#5d6b81;background:#eef2f8;border-color:#e7edf5}
+.msg-body{min-width:0;flex:1}
+.msg-meta{font-size:11px;color:#65768e;font-weight:700;margin-bottom:6px}
+.msg-text{white-space:pre-wrap;word-break:break-word;color:#25334b;font-size:14px;line-height:1.75}
+.msg.user .msg-text{background:#eff5ff;border:1px solid #e0ebfd;border-radius:13px;padding:12px 15px}
+.msg.assistant .msg-body{border-bottom:1px solid #edf1f8;padding-bottom:17px}
+.cvnss-detail{margin-top:12px;border:1px solid #e0ebf7;border-radius:11px;overflow:hidden;max-width:100%}
+.cvnss-detail summary{cursor:pointer;background:#f8fbff;color:#3a6496;font-size:11.5px;font-weight:650;padding:9px 12px}
+.cvnss-detail pre{background:#f7f9fd;white-space:pre-wrap;overflow-wrap:anywhere;max-height:230px;overflow:auto;margin:0;padding:13px;color:#3f5c83;font:12px/1.65 Consolas,monospace}
+.cvnss-detail small{display:block;font-size:10px;color:#7a8ca4;padding:8px 12px}
+.composer{background:linear-gradient(180deg,#fff 0%,#fbfcff 100%);border-top:1px solid var(--line);padding:18px clamp(18px,5.5vw,90px) 15px}
+.composebox{max-width:900px;margin:auto;border:1px solid #d5e1f1;background:white;border-radius:17px;box-shadow:0 5px 24px rgba(37,66,130,.055);padding:12px}
+.composebox:focus-within{border-color:#8bb5f2;box-shadow:0 0 0 3px #e8f1ff}
+#prompt{border:0;outline:0;width:100%;resize:vertical;max-height:205px;min-height:58px;padding:3px 5px;background:transparent;color:var(--ink);font-size:14px;line-height:1.6}
+#prompt::placeholder{color:#8c9ab1}
+.compose-actions{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.tools{display:flex;gap:7px;flex-wrap:wrap}.tools .btn{padding:6px 9px;font-size:11.5px;color:#687b96;font-weight:550}
+#send{padding:9px 19px;font-size:12px}
+.disclaimer{text-align:center;margin:9px auto 0;max-width:900px;font-size:10.5px;color:#8895a9}
+@media(max-width:830px){.app{grid-template-columns:1fr}.sidebar{position:fixed;z-index:20;top:0;bottom:0;left:0;box-shadow:12px 0 40px #16284e20;width:min(300px,88vw);transform:translateX(-110%);transition:transform .2s}.sidebar.open{transform:translateX(0)}
+#toggle-sidebar{display:block}.topbar{min-height:68px;padding:11px 15px}.workspace{height:100dvh}.top-right{gap:7px}.model{max-width:138px}.status{display:none}
+#messages{padding:24px 17px;gap:17px}.composer{padding:12px 12px 13px}.msg{gap:8px}.suggestions{grid-template-columns:1fr}.hero{padding:15px 4px}.disclaimer{font-size:9px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style></head>
+<body><div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="brand"><div class="brandmark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M32 13C22 4 8 11 11 24c-8 6-7 17 1 21-1 12 14 17 20 6 6 11 21 6 20-6 8-4 9-15 1-21C56 11 42 4 32 13Z"/><path d="M32 13v38M19 23l7 6-6 8M45 23l-7 6 6 8"/><circle cx="26" cy="29" r="2" fill="currentColor" stroke="none"/><circle cx="38" cy="29" r="2" fill="currentColor" stroke="none"/></svg></div>
+    <div class="brandtext"><b>BilaBot</b><span>CVNSS4.0 × DeepSeek</span></div>
+  </div>
+  <button class="btn primary create" id="new">＋ &nbsp;Cuộc trò chuyện mới</button>
+  <section><div class="sectionlabel">Lịch sử trên thiết bị</div><nav id="history" class="history" aria-label="Các cuộc trò chuyện"></nav></section>
+  <div class="sidebar-end">
+    <div class="meta-panel"><div class="metalabel">Bộ não CVNSS4.0</div><div class="pipeline"><span>CVNSS4.0</span>→<span>DeepSeek</span>→<span>Unicode</span></div><p class="note">Bộ chuyển đổi CVNSS4.0 phục vụ hiển thị mã văn bản, không phải nhật ký suy luận của model.</p></div>
+    <div class="note">Lịch sử chỉ nằm trong trình duyệt của bạn. Câu hỏi vẫn được chuyển tới DeepSeek để trả lời. <a href="/login">Quản trị</a></div>
+  </div>
+</aside>
+<main class="workspace">
+<header class="topbar"><div class="topinfo"><button class="btn" id="toggle-sidebar" aria-label="Mở danh sách hội thoại">☰</button> <b>BilaBot · Trợ lý tiếng Việt</b><p>Trò chuyện công khai · Không yêu cầu đăng nhập</p></div>
+  <div class="top-right"><span class="model" id="model">Mô hình cố định</span><span class="status"><span class="dot"></span><span id="status">Đang kiểm tra…</span></span></div>
+</header>
+<section id="messages" aria-live="polite"></section>
+<div class="composer"><form id="chat-form" class="composebox"><label for="prompt" class="sectionlabel">Tin nhắn của bạn</label>
+  <textarea id="prompt" maxlength="6000" required aria-label="Nhập tin nhắn" placeholder="Nhập câu hỏi bằng tiếng Việt..."></textarea>
+  <div class="compose-actions"><div class="tools"><button class="btn" id="export" type="button" title="Tải lịch sử JSON">↓ Xuất lịch sử</button><button class="btn" id="clear" type="button" title="Xóa lịch sử trên trình duyệt">Xóa lịch sử</button></div><button id="send" class="btn primary" type="submit">Gửi ↗</button></div>
+</form><p class="disclaimer">Dữ liệu hội thoại được lưu cục bộ trên trình duyệt. Vui lòng không gửi thông tin nhạy cảm. Enter để gửi · Shift+Enter xuống dòng.</p></div>
+</main></div>
+<script src="/public/cvnss.js" defer></script><script src="/public/app.js" defer></script>
+</body></html>`;
 
-export const publicChatJavascript = `'use strict';
+export const publicChatJavascript = String.raw`'use strict';
 (() => {
-  const KEY='bilabot-public-chats-v1';
-  const $=id=>document.getElementById(id);
-  const isMsg=m=>m && (m.role==='user'||m.role==='assistant') && typeof m.content==='string';
-  let chats=[], current='', busy=false;
+  const KEY = 'bilabot-public-chats-v1';
+  const $ = id => document.getElementById(id);
+  const brainSvg = '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M32 13C22 4 8 11 11 24c-8 6-7 17 1 21-1 12 14 17 20 6 6 11 21 6 20-6 8-4 9-15 1-21C56 11 42 4 32 13Z"/><path d="M32 13v38M19 23l7 6-6 8M45 23l-7 6 6 8"/></svg>';
+  const converter = window.CVNSSConverter;
+  const version = converter && converter.VERSION === '5.0.0-audit-safe';
+  const validMessage = m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string';
+  let chats = [], current = '', busy = false;
   try {
-    const saved=JSON.parse(localStorage.getItem(KEY)||'[]');
-    if(Array.isArray(saved)) chats=saved.filter(c=>c&&typeof c.id==='string'&&Array.isArray(c.messages))
-      .slice(-40).map(c=>({id:c.id,title:String(c.title||'Hội thoại').slice(0,70),
-      messages:c.messages.filter(isMsg).slice(-100)}));
-  } catch { chats=[]; }
-  function save(){
-    try { localStorage.setItem(KEY,JSON.stringify(chats.slice(-40))); }
-    catch { $('status').textContent='Bộ nhớ trình duyệt đã đầy. Hãy xuất hoặc xóa lịch sử.'; }
+    const old = JSON.parse(localStorage.getItem(KEY) || '[]');
+    if (Array.isArray(old)) chats = old.filter(c => c && typeof c.id === 'string' && Array.isArray(c.messages))
+      .slice(-32).map(c => ({
+        id: c.id,
+        title: String(c.title || 'Cuộc trò chuyện').slice(0, 60),
+        messages: c.messages.filter(validMessage).slice(-80)
+      }));
+  } catch { chats = []; }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(chats.slice(-32))); }
+    catch { $('status').textContent = 'Bộ nhớ đầy'; }
   }
-  function active(){return chats.find(c=>c.id===current)}
-  function newChat(){const c={id:crypto.randomUUID(),title:'Cuộc trò chuyện mới',messages:[]};
-    chats.push(c);current=c.id;save();render()}
-  function render(){
+  function active() { return chats.find(c => c.id === current); }
+  function closeSidebar() { $('sidebar').classList.remove('open'); }
+  function newChat() {
+    const c = { id: crypto.randomUUID(), title: 'Cuộc trò chuyện mới', messages: [] };
+    chats.push(c); current = c.id; save(); closeSidebar(); render();
+  }
+  function hero() {
+    const el = document.createElement('div');
+    el.className = 'hero';
+    const icon = document.createElement('div');
+    icon.className = 'heroicon';
+    icon.innerHTML = brainSvg;
+    const tag = document.createElement('div');
+    tag.className = 'sublabel'; tag.textContent = 'CVNSS4.0 · BỘ NÃO KÝ HIỆU';
+    const h = document.createElement('h1'); h.textContent = 'Xin chào, tôi là BilaBot';
+    const p = document.createElement('p');
+    p.textContent = 'Hỏi bằng tiếng Việt tự nhiên, nhận câu trả lời Unicode rõ ràng. CVNSS4.0 là lớp biểu diễn văn bản bổ trợ.';
+    el.append(icon, tag, h, p);
+    const choices = [['CVNSS4.0 là gì?', 'Giới thiệu CVNSS4.0'],
+      ['Hướng dẫn học lập trình', 'Gợi ý lộ trình học lập trình'],
+      ['Giải thích một khái niệm', 'Giải thích GIS và bản đồ số'],
+      ['Viết một đoạn văn', 'Viết đoạn văn ngắn về khoa học']];
+    const suggestions = document.createElement('div');
+    suggestions.className = 'suggestions';
+    for (const [label, prompt] of choices) {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+      b.addEventListener('click', () => { $('prompt').value = prompt; $('prompt').focus(); });
+      suggestions.append(b);
+    }
+    el.append(suggestions); return el;
+  }
+  function cvssPreview(text) {
+    if (!version) return 'Không tải được bộ chuyển đổi CVNSS4.0 v5.0.0-audit-safe.';
+    try { return String(converter.fromCqn(text.normalize('NFC')).cvss || ''); }
+    catch { return 'Không thể mã hóa nội dung này bằng CVNSS4.0.'; }
+  }
+  function createMessage(msg) {
+    const section = document.createElement('article');
+    section.className = 'msg ' + msg.role;
+    const avatar = document.createElement('div'); avatar.className = 'avatar';
+    if (msg.role === 'assistant') avatar.innerHTML = brainSvg;
+    else avatar.textContent = '●';
+    const body = document.createElement('div'); body.className = 'msg-body';
+    const meta = document.createElement('div'); meta.className = 'msg-meta';
+    meta.textContent = msg.role === 'user' ? 'Bạn' : 'BilaBot · Unicode tiếng Việt';
+    const text = document.createElement('div'); text.className = 'msg-text';
+    text.textContent = msg.content.normalize('NFC');
+    body.append(meta, text);
+    if (msg.role === 'assistant') {
+      const details = document.createElement('details'); details.className = 'cvnss-detail';
+      const summary = document.createElement('summary');
+      summary.textContent = '◈ Xem cách mã hóa câu trả lời bằng CVNSS4.0';
+      const pre = document.createElement('pre');
+      const hint = document.createElement('small');
+      hint.textContent = 'Bản mã văn bản từ CVNSS4.0 Converter v5.0.0-audit-safe; không phải suy luận nội bộ của DeepSeek.';
+      details.append(summary, pre, hint);
+      details.addEventListener('toggle', () => {
+        if (details.open && !pre.dataset.ready) {
+          pre.textContent = cvssPreview(msg.content);
+          pre.dataset.ready = '1';
+        }
+      });
+      body.append(details);
+    }
+    section.append(avatar, body); return section;
+  }
+  function render() {
     $('history').replaceChildren();
-    chats.slice().reverse().forEach(c=>{const b=document.createElement('button');
-      b.type='button'; b.className=c.id===current?'selected':'';
-      b.textContent=c.title;b.onclick=()=>{if(!busy){current=c.id;render()}};$('history').append(b)});
+    for (const c of chats.slice().reverse()) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = c.id === current ? 'active' : '';
+      b.title = c.title; b.textContent = c.title;
+      b.addEventListener('click', () => { if (!busy) { current = c.id; closeSidebar(); render(); } });
+      $('history').append(b);
+    }
     $('messages').replaceChildren();
-    const msgs=active()?.messages||[];
-    if(!msgs.length){const intro=document.createElement('div');intro.className='welcome';
-      intro.textContent='Xin chào! Hãy nhập câu hỏi để bắt đầu.';$('messages').append(intro)}
-    for(const m of msgs){const e=document.createElement('div');e.className='bubble '+m.role;
-      e.textContent=m.content;$('messages').append(e)}
-    $('messages').scrollTop=$('messages').scrollHeight;
+    const messages = active()?.messages || [];
+    if (messages.length === 0) $('messages').append(hero());
+    else for (const m of messages) $('messages').append(createMessage(m));
+    $('messages').scrollTop = $('messages').scrollHeight;
   }
-  function lock(value){busy=value;$('send').disabled=value;$('prompt').disabled=value;
-    $('new').disabled=value; $('clear').disabled=value;$('send').textContent=value?'Đang trả lời…':'Gửi ↗'}
-  $('new').onclick=()=>{if(!busy)newChat()};
-  $('clear').onclick=()=>{if(!busy&&confirm('Xóa tất cả lịch sử trong trình duyệt này?')){
-    chats=[];localStorage.removeItem(KEY);newChat()}};
-  $('export').onclick=()=>{const blob=new Blob([JSON.stringify(chats,null,2)],{type:'application/json'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-    a.download='bilabot-lich-su.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-  $('prompt').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){
-    e.preventDefault();$('chat-form').requestSubmit()}});
-  $('chat-form').addEventListener('submit',async e=>{
-    e.preventDefault();if(busy)return;
-    const text=$('prompt').value.trim();if(!text)return;
-    const c=active();c.messages.push({role:'user',content:text});
-    if(c.messages.length===1)c.title=text.slice(0,52);
-    $('prompt').value='';save();render();lock(true);
-    try{
-      const history=c.messages.slice(-19);
-      const response=await fetch('/api/public/chat',{method:'POST',
-        headers:{'content-type':'application/json'},credentials:'omit',
-        body:JSON.stringify({messages:history})});
-      const data=await response.json();
-      if(!response.ok||!data.ok)throw new Error(data.error||'Không thể kết nối.');
-      c.messages.push({role:'assistant',content:String(data.answer)});
-      save();render();
-    }catch(err){
-      $('status').textContent=err instanceof Error?err.message:'Yêu cầu thất bại.';
-    }finally{lock(false);$('prompt').focus()}
+  function lock(value) {
+    busy = value;
+    $('send').disabled = value; $('prompt').disabled = value;
+    $('clear').disabled = value; $('new').disabled = value;
+    $('send').textContent = value ? 'Đang trả lời…' : 'Gửi ↗';
+  }
+  function boundedContext(messages) {
+    const a = messages.filter(validMessage).slice(-19);
+    let total = a.reduce((n, m) => n + m.content.length, 0);
+    while (total > 26000 && a.length > 1) total -= a.shift().content.length;
+    return a;
+  }
+  $('new').addEventListener('click', () => { if (!busy) newChat(); });
+  $('toggle-sidebar').addEventListener('click', () => { $('sidebar').classList.toggle('open'); });
+  $('clear').addEventListener('click', () => {
+    if (busy || !confirm('Xóa toàn bộ lịch sử được lưu trong trình duyệt này?')) return;
+    chats = []; localStorage.removeItem(KEY); newChat();
   });
-  if(chats.length){current=chats[chats.length-1].id;render()}else newChat();
-  fetch('/api/public/config',{credentials:'omit'}).then(r=>r.json()).then(d=>{
-    $('model').textContent=d.model||''; $('status').textContent=d.ready?'Sẵn sàng · Không cần đăng nhập':'Chưa cấu hình API key';
-  }).catch(()=>{$('status').textContent='Không thể kiểm tra dịch vụ'});
-})();`;
+  $('export').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(chats, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = url; a.download = 'bilabot-lich-su.json'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  });
+  $('prompt').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+      e.preventDefault(); $('chat-form').requestSubmit();
+    }
+  });
+  $('chat-form').addEventListener('submit', async e => {
+    e.preventDefault(); if (busy) return;
+    const prompt = $('prompt').value.trim().normalize('NFC');
+    if (!prompt) return;
+    const c = active();
+    c.messages.push({ role: 'user', content: prompt });
+    if (c.messages.length === 1) c.title = prompt.slice(0, 55);
+    $('prompt').value = ''; save(); render(); lock(true);
+    try {
+      const response = await fetch('/api/public/chat', {
+        method: 'POST', credentials: 'omit',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages: boundedContext(c.messages) })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể kết nối API.');
+      c.messages.push({ role: 'assistant', content: String(data.answer).normalize('NFC') });
+      $('status').textContent = 'Sẵn sàng'; save(); render();
+    } catch (error) {
+      $('status').textContent = error instanceof Error ? error.message : 'Yêu cầu thất bại';
+    } finally { lock(false); $('prompt').focus(); }
+  });
+  if (chats.length) { current = chats[chats.length - 1].id; render(); }
+  else newChat();
+  fetch('/api/public/config', { credentials: 'omit' }).then(r => r.json()).then(data => {
+    $('model').textContent = data.model || 'DeepSeek';
+    $('status').textContent = data.ready ? 'Sẵn sàng' : 'Chưa có API key';
+    $('status').title = data.ready ? 'Model và khóa do chủ website cấu hình trên Cloudflare' : 'Chủ website cần cài đặt DeepSeek API key trong Worker Secret';
+  }).catch(() => { $('status').textContent = 'Không kết nối'; });
+})();
+`;
