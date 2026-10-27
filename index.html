@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="theme-color" content="#f8fafc">
+<title>BilaBot · Bộ não CVNSS4.0</title>
+<style>
+:root{color-scheme:light;--page:#f6f8fc;--paper:#fff;--ink:#19243c;--muted:#66758d;--line:#e4eaf3;--accent:#245cbd;--light:#eaf2ff;--cyan:#069aab;--shadow:0 14px 50px rgba(37,65,118,.045);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink)}button,textarea{font:inherit}button{cursor:pointer}
+button:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #93b9ff;outline-offset:2px}
+button:disabled{opacity:.55;cursor:not-allowed}
+.app{display:grid;grid-template-columns:268px minmax(0,1fr);min-height:100dvh;max-width:1536px;margin:auto;background:#fff;box-shadow:var(--shadow)}
+.sidebar{background:#f8faff;border-right:1px solid var(--line);display:flex;flex-direction:column;padding:23px 15px 17px;gap:22px;min-width:0}
+.brand{display:flex;gap:11px;align-items:center;padding:0 9px}
+.brandmark{height:42px;width:42px;display:grid;place-items:center;border:1px solid #cae1fb;border-radius:15px;background:linear-gradient(135deg,#e7f3ff,#eff7ff);color:var(--accent)}
+.brandmark svg{width:27px;height:27px}
+.brandtext{line-height:1.24}.brandtext b{font-weight:800;font-size:20px;letter-spacing:-.6px}.brandtext span{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.sectionlabel{text-transform:uppercase;font-size:10px;font-weight:750;letter-spacing:.12em;color:#8493aa;padding:0 10px}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:12px;padding:10px 13px;font-weight:600;transition:background .16s,border-color .16s}
+.btn:hover{background:#eff5ff;border-color:#b5cdec}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:white}.btn.primary:hover{background:#194b9e}
+.create{width:100%;text-align:left;display:flex;align-items:center;gap:9px}
+.history{overflow:auto;display:grid;gap:5px;align-content:start;min-height:0;max-height:37vh}
+.history button{background:transparent;border:1px solid transparent;text-align:left;color:#53647f;padding:10px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:10px}
+.history button:hover{background:#eff4fe}.history button.active{background:#e8f0fd;border-color:#d5e5fb;color:#2157b2;font-weight:650}
+.sidebar-end{margin-top:auto;display:grid;gap:11px}
+.meta-panel{border:1px solid #e3ebf7;background:#fff;border-radius:15px;padding:13px 14px}
+.metalabel{font-weight:700;font-size:12px;margin-bottom:7px;color:#334766}
+.pipeline{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:10.5px;font-weight:700;color:#37649d}
+.pipeline span{padding:4px 7px;border-radius:7px;background:#eff5fd}
+.note{font-size:11px;color:var(--muted);line-height:1.6}
+.workspace{min-width:0;display:flex;flex-direction:column;height:100dvh}
+.topbar{min-height:77px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px clamp(18px,3vw,40px);background:#fff}
+.topinfo{min-width:0}.topinfo b{font-size:15px}.topinfo p{font-size:11.5px;margin:3px 0 0;color:var(--muted)}
+.top-right{display:flex;align-items:center;gap:12px;min-width:0}
+.model{font-size:11px;color:#315482;background:#f0f5fc;padding:7px 10px;border:1px solid #e0eaf8;border-radius:99px;white-space:nowrap;max-width:205px;overflow:hidden;text-overflow:ellipsis}
+.status{display:flex;gap:6px;align-items:center;font-size:11.5px;color:#32705e;white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:#2cb895;flex-shrink:0}
+#toggle-sidebar{display:none}
+#messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:23px;padding:26px clamp(18px,5.5vw,90px);scroll-behavior:smooth}
+.hero{max-width:580px;margin:auto;text-align:center;display:grid;justify-items:center;gap:12px;padding:28px 5px}
+.heroicon{width:86px;height:86px;display:grid;place-items:center;border-radius:28px;border:1px solid #d9e8ff;background:radial-gradient(circle at 20% 20%,#fff,#eaf4ff);box-shadow:0 12px 30px #dfeafa88}
+.heroicon svg{width:62px;height:62px;color:#2b72c5}
+.hero h1{font-size:clamp(23px,3.5vw,32px);line-height:1.25;letter-spacing:-1px;margin:5px 0 0}
+.hero p{font-size:14px;color:var(--muted);margin:0;max-width:440px}
+.hero .sublabel{font-size:11.5px;font-weight:700;color:#3570bd;letter-spacing:.08em}
+.suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;width:100%;margin-top:17px}
+.suggestions button{padding:12px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:13px;font-size:12px;color:#425874}
+.suggestions button:hover{border-color:#91b8f5;background:#f8fbff}
+.msg{max-width:860px;width:100%;display:flex;gap:12px;align-self:center;align-items:flex-start}
+.avatar{width:32px;height:32px;display:grid;place-items:center;border-radius:11px;background:#eaf3ff;border:1px solid #d8e8ff;color:#2b65b4;flex:0 0 auto;margin-top:2px}
+.avatar svg{width:20px;height:20px}.msg.user .avatar{color:#5d6b81;background:#eef2f8;border-color:#e7edf5}
+.msg-body{min-width:0;flex:1}
+.msg-meta{font-size:11px;color:#65768e;font-weight:700;margin-bottom:6px}
+.msg-text{white-space:pre-wrap;word-break:break-word;color:#25334b;font-size:14px;line-height:1.75}
+.msg.user .msg-text{background:#eff5ff;border:1px solid #e0ebfd;border-radius:13px;padding:12px 15px}
+.msg.assistant .msg-body{border-bottom:1px solid #edf1f8;padding-bottom:17px}
+.cvnss-detail{margin-top:12px;border:1px solid #e0ebf7;border-radius:11px;overflow:hidden;max-width:100%}
+.cvnss-detail summary{cursor:pointer;background:#f8fbff;color:#3a6496;font-size:11.5px;font-weight:650;padding:9px 12px}
+.cvnss-detail pre{background:#f7f9fd;white-space:pre-wrap;overflow-wrap:anywhere;max-height:230px;overflow:auto;margin:0;padding:13px;color:#3f5c83;font:12px/1.65 Consolas,monospace}
+.cvnss-detail small{display:block;font-size:10px;color:#7a8ca4;padding:8px 12px}
+.composer{background:linear-gradient(180deg,#fff 0%,#fbfcff 100%);border-top:1px solid var(--line);padding:18px clamp(18px,5.5vw,90px) 15px}
+.composebox{max-width:900px;margin:auto;border:1px solid #d5e1f1;background:white;border-radius:17px;box-shadow:0 5px 24px rgba(37,66,130,.055);padding:12px}
+.composebox:focus-within{border-color:#8bb5f2;box-shadow:0 0 0 3px #e8f1ff}
+#prompt{border:0;outline:0;width:100%;resize:vertical;max-height:205px;min-height:58px;padding:3px 5px;background:transparent;color:var(--ink);font-size:14px;line-height:1.6}
+#prompt::placeholder{color:#8c9ab1}
+.compose-actions{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.tools{display:flex;gap:7px;flex-wrap:wrap}.tools .btn{padding:6px 9px;font-size:11.5px;color:#687b96;font-weight:550}
+#send{padding:9px 19px;font-size:12px}
+.disclaimer{text-align:center;margin:9px auto 0;max-width:900px;font-size:10.5px;color:#8895a9}
+@media(max-width:830px){.app{grid-template-columns:1fr}.sidebar{position:fixed;z-index:20;top:0;bottom:0;left:0;box-shadow:12px 0 40px #16284e20;width:min(300px,88vw);transform:translateX(-110%);transition:transform .2s}.sidebar.open{transform:translateX(0)}
+#toggle-sidebar{display:block}.topbar{min-height:68px;padding:11px 15px}.workspace{height:100dvh}.top-right{gap:7px}.model{max-width:138px}.status{display:none}
+#messages{padding:24px 17px;gap:17px}.composer{padding:12px 12px 13px}.msg{gap:8px}.suggestions{grid-template-columns:1fr}.hero{padding:15px 4px}.disclaimer{font-size:9px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style><meta name="description" content="BilaBot · Trợ lý AI tiếng Việt với giao diện sáng CVNSS4.0, xử lý DeepSeek qua Cloudflare."><link rel="canonical" href="https://xulytiengviet.github.io/Bilabot2/"></head>
+<body><div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="brand"><div class="brandmark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M32 13C22 4 8 11 11 24c-8 6-7 17 1 21-1 12 14 17 20 6 6 11 21 6 20-6 8-4 9-15 1-21C56 11 42 4 32 13Z"/><path d="M32 13v38M19 23l7 6-6 8M45 23l-7 6 6 8"/><circle cx="26" cy="29" r="2" fill="currentColor" stroke="none"/><circle cx="38" cy="29" r="2" fill="currentColor" stroke="none"/></svg></div>
+    <div class="brandtext"><b>BilaBot</b><span>CVNSS4.0 × DeepSeek</span></div>
+  </div>
+  <button class="btn primary create" id="new">＋ &nbsp;Cuộc trò chuyện mới</button>
+  <section><div class="sectionlabel">Lịch sử trên thiết bị</div><nav id="history" class="history" aria-label="Các cuộc trò chuyện"></nav></section>
+  <div class="sidebar-end">
+    <div class="meta-panel"><div class="metalabel">Bộ não CVNSS4.0</div><div class="pipeline"><span>CVNSS4.0</span>→<span>DeepSeek</span>→<span>Unicode</span></div><p class="note">Bộ chuyển đổi CVNSS4.0 phục vụ hiển thị mã văn bản, không phải nhật ký suy luận của model.</p></div>
+    <div class="note">Lịch sử chỉ nằm trong trình duyệt của bạn. Câu hỏi vẫn được chuyển tới DeepSeek để trả lời. <a href="https://bilabot2.bilabot-cvnss4-71bd4651.workers.dev/login">Quản trị</a></div>
+  </div>
+</aside>
+<main class="workspace">
+<header class="topbar"><div class="topinfo"><button class="btn" id="toggle-sidebar" aria-label="Mở danh sách hội thoại">☰</button> <b>BilaBot · Trợ lý tiếng Việt</b><p>Trò chuyện công khai · Không yêu cầu đăng nhập</p></div>
+  <div class="top-right"><span class="model" id="model">Mô hình cố định</span><span class="status"><span class="dot"></span><span id="status">Đang kiểm tra…</span></span></div>
+</header>
+<section id="messages" aria-live="polite"></section>
+<div class="composer"><form id="chat-form" class="composebox"><label for="prompt" class="sectionlabel">Tin nhắn của bạn</label>
+  <textarea id="prompt" maxlength="6000" required aria-label="Nhập tin nhắn" placeholder="Nhập câu hỏi bằng tiếng Việt..."></textarea>
+  <div class="compose-actions"><div class="tools"><button class="btn" id="export" type="button" title="Tải lịch sử JSON">↓ Xuất lịch sử</button><button class="btn" id="clear" type="button" title="Xóa lịch sử trên trình duyệt">Xóa lịch sử</button></div><button id="send" class="btn primary" type="submit">Gửi ↗</button></div>
+</form><p class="disclaimer">Dữ liệu hội thoại được lưu cục bộ trên trình duyệt. Vui lòng không gửi thông tin nhạy cảm. Enter để gửi · Shift+Enter xuống dòng.</p></div>
+</main></div>
+<script src="./docs/public/cvnss.js" defer></script><script src="./docs/public/app.js" defer></script>
+</body></html>

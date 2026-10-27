@@ -20,7 +20,46 @@ const MAX_MESSAGE_COUNT = 20
 const MAX_MESSAGE_CHARS = 6_000
 const MAX_TOTAL_CHARS = 28_000
 const MODEL_ENDPOINT = 'https://api.deepseek.com/anthropic/v1/messages'
+/** Only this GitHub Pages origin may access the public model proxy cross-origin. */
+const GITHUB_PAGES_ORIGIN = 'https://xulytiengviet.github.io'
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
+
+/** Browser Origin checks are CSRF/CORS guardrails, not authentication or bot protection. */
+function allowedPublicOrigin(request: Request): string | undefined {
+  const origin = request.headers.get('origin')
+  if (origin === GITHUB_PAGES_ORIGIN || origin === new URL(request.url).origin) return origin
+  return undefined
+}
+
+export function publicChatPreflight(request: Request): Response {
+  const origin = allowedPublicOrigin(request)
+  const path = new URL(request.url).pathname
+  const method = request.headers.get('access-control-request-method')
+  if (!origin || !(path === '/api/public/chat' && method === 'POST'
+    || path === '/api/public/config' && method === 'GET')) {
+    return new Response(null, { status: 403, headers: { 'cache-control': 'no-store', 'vary': 'Origin' } })
+  }
+  return new Response(null, { status: 204, headers: {
+    'access-control-allow-origin': origin,
+    'access-control-allow-methods': 'GET, POST',
+    'access-control-allow-headers': 'content-type',
+    'access-control-max-age': '600',
+    'cache-control': 'no-store',
+    'vary': 'Origin',
+  } })
+}
+
+export function publicChatWithCors(request: Request, response: Response): Response {
+  const origin = allowedPublicOrigin(request)
+  if (!origin) return response
+  const headers = new Headers(response.headers)
+  headers.set('access-control-allow-origin', origin)
+  headers.set('cross-origin-resource-policy', 'cross-origin')
+  headers.append('vary', 'Origin')
+  return new Response(response.body, {
+    status: response.status, statusText: response.statusText, headers,
+  })
+}
 
 export function isPublicChatEnabled(env: PublicChatEnv): boolean {
   return env.DSH_EDGE_PUBLIC_CHAT === 'enabled'
@@ -103,8 +142,7 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
 
   // A browser page from another origin must not be allowed to spend this key.
   // This is CSRF protection, not anti-bot authentication; WAF rules still matter.
-  if (request.headers.get('origin') !== url.origin
-    || request.headers.get('sec-fetch-site') === 'cross-site') {
+  if (!allowedPublicOrigin(request)) {
     return error(403, 'Chỉ chấp nhận yêu cầu từ website này.')
   }
   if (!(request.headers.get('content-type') ?? '').toLowerCase().startsWith('application/json')) {

@@ -1,6 +1,6 @@
 // First: platform fetch semantics every upstream provider relies on.
 import './fetch-redirect-error.ts'
-import { handlePublicChatRoute, isPublicChatEnabled } from './public-chat.ts'
+import { handlePublicChatRoute, isPublicChatEnabled, publicChatPreflight, publicChatWithCors } from './public-chat.ts'
 import { getWorkspace } from '@cloudflare/computer'
 import type { EdgeShellResult } from './agent.ts'
 import {
@@ -45,6 +45,10 @@ const OWNER_INSTANCE = 'owner'
 export default {
   async fetch(request, env): Promise<Response> {
     if (request.method === 'OPTIONS') {
+      const path = new URL(request.url).pathname
+      if (isPublicChatEnabled(env) && path.startsWith('/api/public/')) {
+        return publicChatPreflight(request)
+      }
       return new Response(null, {
         status: 204,
         headers: corsHeaders(),
@@ -54,7 +58,8 @@ export default {
     try {
       const url = new URL(request.url)
       if (isPublicChatEnabled(env) && (url.pathname === '/' || url.pathname === '/public' || url.pathname.startsWith('/api/public/') || url.pathname.startsWith('/public/'))) {
-        return await handlePublicChatRoute(request, env)
+        const response = await handlePublicChatRoute(request, env)
+        return url.pathname.startsWith('/api/public/') ? publicChatWithCors(request, response) : response
       }
       const auth = resolveOwnerAuthConfig(env.DSH_EDGE_ACCESS_KEY)
       if (request.method === 'GET' && url.pathname === '/api/health') {
