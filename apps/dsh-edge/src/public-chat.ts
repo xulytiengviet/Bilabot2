@@ -41,7 +41,7 @@ export function publicChatPreflight(request: Request): Response {
   }
   return new Response(null, { status: 204, headers: {
     'access-control-allow-origin': origin,
-    'access-control-allow-methods': method,
+    'access-control-allow-methods': 'GET, POST',
     'access-control-allow-headers': 'content-type',
     'access-control-max-age': '600',
     'cache-control': 'no-store',
