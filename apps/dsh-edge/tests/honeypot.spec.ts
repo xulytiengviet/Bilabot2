@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { handleHoneypotRequest, HONEYPOT_PATHS, isHoneypotPath } from '../src/honeypot.ts'
-import { quotaAvailable, quotaCall, PUBLIC_VISITOR_MAX_QUESTIONS } from '../src/visitor-quota.ts'
+import { quotaAvailable, quotaCall, PUBLIC_VISITOR_MAX_QUESTIONS } from '../src/visitor-quota-core.ts'
 import { handlePublicChatRoute } from '../src/public-chat.ts'
 import type { PublicChatEnv } from '../src/public-chat.ts'
 
