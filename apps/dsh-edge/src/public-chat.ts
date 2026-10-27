@@ -5,6 +5,7 @@
 import { resolveEdgeModel } from './deepseek.ts'
 import { EdgeHttpError, readJsonObject } from './http.ts'
 import { publicChatHtml, publicChatJavascript } from './public-chat-page.ts'
+import { cvnssConverterSource } from './cvnss-converter-bundle.ts'
 
 export interface PublicChatEnv {
   DSH_EDGE_PUBLIC_CHAT?: string
@@ -85,6 +86,9 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
   }
   if (request.method === 'GET' && url.pathname === '/public/app.js') {
     return new Response(publicChatJavascript, { headers: headers('text/javascript; charset=utf-8') })
+  }
+  if (request.method === 'GET' && url.pathname === '/public/cvnss.js') {
+    return new Response(cvnssConverterSource, { headers: headers('text/javascript; charset=utf-8') })
   }
   if (request.method === 'GET' && url.pathname === '/api/public/config') {
     try {
