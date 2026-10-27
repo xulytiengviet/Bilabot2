@@ -231,6 +231,8 @@ function applySessionListMetadata(
 
 /** Bindings shared by the entry Worker and each workspace Durable Object. */
 export interface EdgeEnv {
+  AI?: Ai
+  PUBLIC_VISITOR_QUOTA?: DurableObjectNamespace<import('./visitor-quota.ts').PublicVisitorQuota>
   CF_VERSION_METADATA?: { id: string }
   DSH_EDGE_INSTANCE: DurableObjectNamespace<DshEdgeInstance>
   ASSETS: Fetcher

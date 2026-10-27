@@ -2,17 +2,16 @@
  * Deliberately does NOT call the Harness session/agent/DO APIs: they persist data
  * and expose tools intended for the single owner. No chat content is stored here.
  */
-import { resolveEdgeModel } from './deepseek.ts'
 import { EdgeHttpError, readJsonObject } from './http.ts'
 import { publicChatHtml, publicChatJavascript } from './public-chat-page.ts'
 import { cvnssConverterSource } from './cvnss-converter-bundle.ts'
-import { privateRateLimitKey } from './honeypot.ts'
+import { PUBLIC_VISITOR_MAX_QUESTIONS, quotaCall } from './visitor-quota-core.ts'
+import type { PublicQuotaEnv } from './visitor-quota-core.ts'
 
-export interface PublicChatEnv {
+export interface PublicChatEnv extends PublicQuotaEnv {
   DSH_EDGE_PUBLIC_CHAT?: string
   DSH_EDGE_PUBLIC_MAX_TOKENS?: string
-  DEEPSEEK_API_KEY?: string
-  DEEPSEEK_MODEL?: string
+  AI?: Ai
   PUBLIC_CHAT_RATE_LIMITER?: { limit: (input: { key: string }) => Promise<{ success: boolean }> }
 }
 
@@ -20,7 +19,7 @@ const MAX_BODY_BYTES = 64 * 1024
 const MAX_MESSAGE_COUNT = 20
 const MAX_MESSAGE_CHARS = 6_000
 const MAX_TOTAL_CHARS = 28_000
-const MODEL_ENDPOINT = 'https://api.deepseek.com/anthropic/v1/messages'
+export const PUBLIC_AI_MODEL = '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b'
 /** Only this GitHub Pages origin may access the public model proxy cross-origin. */
 const GITHUB_PAGES_ORIGIN = 'https://xulytiengviet.github.io'
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
@@ -131,11 +130,13 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
     return new Response(cvnssConverterSource, { headers: headers('text/javascript; charset=utf-8') })
   }
   if (request.method === 'GET' && url.pathname === '/api/public/config') {
-    try {
-      return result({ ok: true, model: resolveEdgeModel(env.DEEPSEEK_MODEL), ready: Boolean(env.DEEPSEEK_API_KEY?.trim()) })
-    } catch {
-      return error(503, 'Cấu hình mô hình chưa hợp lệ.')
-    }
+    return result({
+      ok: true,
+      model: PUBLIC_AI_MODEL,
+      provider: 'workers-ai',
+      ready: Boolean(env.AI && env.PUBLIC_VISITOR_QUOTA && env.PUBLIC_CHAT_RATE_LIMITER),
+      maxQuestionsPerIp: PUBLIC_VISITOR_MAX_QUESTIONS,
+    })
   }
   if (request.method !== 'POST' || url.pathname !== '/api/public/chat') {
     return error(404, 'Không tìm thấy trang hoặc API.')
@@ -149,52 +150,77 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
   if (!(request.headers.get('content-type') ?? '').toLowerCase().startsWith('application/json')) {
     return error(415, 'Yêu cầu phải ở định dạng JSON.')
   }
-  if (!env.DEEPSEEK_API_KEY?.trim()) return error(503, 'Chủ website chưa cấu hình API key.')
-  if (env.PUBLIC_CHAT_RATE_LIMITER === undefined) {
-    return error(503, 'Chưa cấu hình giới hạn truy cập công khai.')
+  if (!env.AI || !env.PUBLIC_VISITOR_QUOTA || !env.PUBLIC_CHAT_RATE_LIMITER) {
+    return error(503, 'Trợ lý chưa sẵn sàng. Vui lòng thử lại sau.')
   }
 
   try {
-    const model = resolveEdgeModel(env.DEEPSEEK_MODEL)
     const maxTokens = publicMaxTokens(env.DSH_EDGE_PUBLIC_MAX_TOKENS)
     const payload = await readJsonObject(request, MAX_BODY_BYTES)
     const messages = validatePublicMessages(payload.messages)
-    const rateKey = await privateRateLimitKey(request, env.DEEPSEEK_API_KEY)
-    // Requests outside the Cloudflare edge share one conservative fallback bucket.
-    const limited = await env.PUBLIC_CHAT_RATE_LIMITER.limit({ key: rateKey ?? 'public-chat:missing-client-ip' })
-    if (!limited.success) return error(429, 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau một phút.')
 
-    const upstream = await fetch(MODEL_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': env.DEEPSEEK_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model,
+    // The opaque rate-limit key is created in a private Durable Object from
+    // a stable random HMAC salt; no raw IP or messages are saved to storage.
+    const identity = await quotaCall(env, request, 'key')
+    if (!identity.key) return error(503, 'Chưa thể xác định hạn mức truy cập.')
+    const limited = await env.PUBLIC_CHAT_RATE_LIMITER.limit({ key: identity.key })
+    if (!limited.success) {
+      return error(429, 'Bạn đã gửi 5 yêu cầu trong một phút. Vui lòng thử lại sau một phút.')
+    }
+    const token = crypto.randomUUID()
+    const reservation = await quotaCall(env, request, 'reserve', token)
+    if (!reservation.ok) {
+      return result({
+        ok: false,
+        error: 'Địa chỉ IP này đã sử dụng đủ 10 câu hỏi miễn phí.',
+        remaining: 0,
+        maxQuestionsPerIp: PUBLIC_VISITOR_MAX_QUESTIONS,
+      }, 429)
+    }
+    try {
+      const prompt: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+        { role: 'system', content: 'Bạn là Trợ lý Bila, trả lời bằng tiếng Việt Unicode NFC, ngắn gọn, chính xác. CVNSS4.0 là hệ ký hiệu văn bản bổ trợ ở giao diện; không mô tả suy luận nội bộ của AI. Không hiển thị phần suy luận riêng tư.' },
+        ...messages,
+      ]
+      const reply = await env.AI.run(PUBLIC_AI_MODEL, {
+        messages: prompt,
         max_tokens: maxTokens,
-        system: 'Bạn là BilaBot, trợ lý AI tiếng Việt tích hợp với hệ sinh thái CVNSS4.0. Hãy trả lời bằng tiếng Việt Unicode chuẩn (NFC), rõ ràng, chính xác, hữu ích. CVNSS4.0 là một hệ ký hiệu/chuyển mã văn bản ở ứng dụng; không được tuyên bố mô hình thực sự suy luận nội bộ bằng CVNSS4.0. Chỉ trình bày mã CVNSS khi người dùng yêu cầu.',
-        messages,
         stream: false,
-      }),
-      signal: AbortSignal.timeout(45_000),
-    })
-    if (!upstream.ok) {
-      // Never expose provider response bodies: they might contain account metadata.
-      return error(upstream.status === 429 ? 429 : 502,
-        upstream.status === 429 ? 'Dịch vụ AI đang giới hạn yêu cầu. Hãy thử lại sau.' : 'Không thể kết nối với dịch vụ AI.')
+      })
+      const rawAnswer = typeof reply === 'object' && reply !== null
+        && 'response' in reply && typeof reply.response === 'string' ? reply.response : ''
+      // The distill model may include internal <think> blocks; never display them.
+      const answer = rawAnswer.replace(/<think>[\s\S]*?<\/think>/giu, '')
+        .replace(/<think>[\s\S]*$/giu, '').trim()
+      if (!answer) throw new Error('Empty AI response')
+      const committed = await quotaCall(env, request, 'finish', token, true)
+      if (!committed.ok) throw new Error('Quota confirmation failed')
+      return result({
+        ok: true, answer: answer.normalize('NFC'), model: PUBLIC_AI_MODEL,
+        remaining: committed.remaining,
+        maxQuestionsPerIp: PUBLIC_VISITOR_MAX_QUESTIONS,
+      })
+    } catch (cause) {
+      // No question is charged for provider failure / exhausted free allocation.
+      await quotaCall(env, request, 'finish', token, false).catch(() => undefined)
+      if (isFreeTierAllowanceError(cause)) {
+        return error(429, 'Hạn mức AI miễn phí của Cloudflare hôm nay đã hết. Hạn mức được cấp lại lúc 07:00 mỗi ngày (giờ Việt Nam). Vui lòng thử lại sau.')
+      }
+      return error(503, 'Dịch vụ AI đang bận hoặc tạm gián đoạn. Bạn chưa bị trừ lượt hỏi.')
     }
-    const reply = await upstream.json() as {
-      content?: Array<{ type?: string; text?: string }>
-    }
-    const answer = reply.content?.filter(block => block.type === 'text')
-      .map(block => block.text ?? '').join('\n').trim()
-    if (!answer) return error(502, 'Dịch vụ AI chưa trả về nội dung.')
-    return result({ ok: true, answer: answer.normalize('NFC'), model })
   } catch (cause) {
     if (cause instanceof EdgeHttpError) return error(cause.status, cause.message)
-    // Never log or echo the request, upstream headers, keys or prompt.
-    return error(503, 'Tạm thời không thể xử lý yêu cầu. Vui lòng thử lại.')
+    // Never log or echo prompts, visitor IP, headers or internal provider errors.
+    return error(503, 'Không thể kết nối tới dịch vụ AI hoặc bộ đếm. Vui lòng thử lại sau.')
   }
+}
+
+/** Cloudflare code 3036: daily free allowance exceeded. Never echo provider errors. */
+export function isFreeTierAllowanceError(cause: unknown): boolean {
+  if (!cause || typeof cause !== 'object') return false
+  const obj = cause as { code?: number | string; message?: string; cause?: unknown }
+  if (String(obj.code) === '3036') return true
+  if (typeof obj.message === 'string' &&
+      /3036|daily free allocation|free tier.*exceed|10[,]?000 neurons|account limited/iu.test(obj.message)) return true
+  return Boolean(obj.cause && obj.cause !== cause && isFreeTierAllowanceError(obj.cause))
 }

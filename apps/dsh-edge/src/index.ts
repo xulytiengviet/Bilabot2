@@ -38,6 +38,7 @@ import {
 // The optional isolated shell reaches the owning Durable Object through these entrypoints.
 export { WorkspaceProxy, WorkspaceServiceProxy } from '@cloudflare/computer'
 export { DshEdgeInstance } from './instance.ts'
+export { PublicVisitorQuota } from './visitor-quota.ts'
 
 type Env = EdgeEnv
 

@@ -151,7 +151,14 @@
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể kết nối API.');
       c.messages.push({ role: 'assistant', content: String(data.answer).normalize('NFC') });
-      showNotice(''); save(); render();
+      showNotice('');
+      if (typeof data.remaining === 'number') {
+        $('quota-info').textContent = data.remaining > 0
+          ? 'Còn ' + data.remaining + '/10 câu hỏi cho IP này'
+          : 'IP này đã sử dụng đủ 10 câu hỏi miễn phí.';
+        $('quota-info').hidden = false;
+      }
+      save(); render();
     } catch (error) {
       showNotice(error instanceof Error ? error.message : 'Yêu cầu thất bại');
     } finally { lock(false); $('prompt').focus(); }

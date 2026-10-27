@@ -70,6 +70,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .disclaimer{text-align:center;margin:9px auto 0;max-width:900px;font-size:10.5px;color:#8895a9}
 .notice{max-width:900px;margin:9px auto 0;padding:9px 12px;background:#fff6ec;border:1px solid #f8dec0;border-radius:9px;font-size:12px;color:#96541b;text-align:center}
 .notice[hidden]{display:none}
+.quota-info{margin:5px auto 0;text-align:center;font-size:11px;color:#3c689d}.quota-info[hidden]{display:none}
 .credits{flex-shrink:0;text-align:center;background:#fbfcff;border-top:1px solid var(--line);padding:10px 18px;color:#687993;font-size:11px;line-height:1.6}
 .credits strong{font-weight:700;color:#3d506d}
 @media(max-width:830px){.credits{padding:9px 14px;font-size:10px}.credit-sep{display:none}}
@@ -96,7 +97,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <div class="composer"><form id="chat-form" class="composebox"><label for="prompt" class="sectionlabel">Tin nhắn của bạn</label>
   <textarea id="prompt" maxlength="6000" required aria-label="Nhập tin nhắn" placeholder="Nhập câu hỏi bằng tiếng Việt..."></textarea>
   <div class="compose-actions"><div class="tools"><button class="btn" id="export" type="button" title="Tải lịch sử JSON">↓ Xuất lịch sử</button><button class="btn" id="clear" type="button" title="Xóa lịch sử trên trình duyệt">Xóa lịch sử</button></div><button id="send" class="btn primary" type="submit">Gửi ↗</button></div>
-</form><p id="notice" class="notice" role="status" aria-live="polite" hidden></p><p class="disclaimer">Dữ liệu hội thoại được lưu cục bộ trên trình duyệt. Vui lòng không gửi thông tin nhạy cảm. Enter để gửi · Shift+Enter xuống dòng.</p></div>
+</form><p id="notice" class="notice" role="status" aria-live="polite" hidden></p><p class="disclaimer">Tối đa 10 câu hỏi tổng cộng cho mỗi IP · Tối đa 5 yêu cầu/phút. Đừng gửi dữ liệu nhạy cảm.</p><p class="quota-info" id="quota-info" aria-live="polite" hidden></p></div>
 <footer class="credits">@2026, <strong>Trần Tư Bình</strong> và <strong>Kiều Trường Lâm</strong> phát kiến CVNSS4.0 <span class="credit-sep">·</span> Nguồn: <strong>Long Ngo</strong> phát triển · Giấy phép MIT</footer>
 </main></div>
 <script src="./docs/public/cvnss.js" defer></script><script src="./docs/public/app.js" defer></script>
