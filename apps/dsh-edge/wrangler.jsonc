@@ -38,6 +38,10 @@
       {
         "name": "DSH_EDGE_INSTANCE",
         "class_name": "DshEdgeInstance"
+      },
+      {
+        "name": "PUBLIC_VISITOR_QUOTA",
+        "class_name": "PublicVisitorQuota"
       }
     ]
   },
@@ -46,6 +50,12 @@
       "tag": "v1",
       "new_sqlite_classes": [
         "DshEdgeInstance"
+      ]
+    },
+    {
+      "tag": "v2-public-visitor-quota",
+      "new_sqlite_classes": [
+        "PublicVisitorQuota"
       ]
     }
   ],
@@ -62,6 +72,10 @@
           {
             "name": "DSH_EDGE_INSTANCE",
             "class_name": "DshEdgeInstance"
+          },
+          {
+            "name": "PUBLIC_VISITOR_QUOTA",
+            "class_name": "PublicVisitorQuota"
           }
         ]
       },
@@ -73,7 +87,7 @@
       "vars": {
         "DSH_EDGE_PUBLIC_CHAT": "enabled",
         "DSH_EDGE_PUBLIC_MAX_TOKENS": "1024",
-        "DEEPSEEK_MODEL": "deepseek-flash"
+        "WORKERS_AI_MODEL": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b"
       },
       "ratelimits": [
         {
@@ -87,7 +101,24 @@
       ],
       "observability": {
         "enabled": false
-      }
+      },
+      "ai": {
+        "binding": "AI"
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_sqlite_classes": [
+            "DshEdgeInstance"
+          ]
+        },
+        {
+          "tag": "v2-public-visitor-quota",
+          "new_sqlite_classes": [
+            "PublicVisitorQuota"
+          ]
+        }
+      ]
     },
     "container": {
       "version_metadata": {
@@ -98,6 +129,10 @@
           {
             "name": "DSH_EDGE_INSTANCE",
             "class_name": "DshEdgeInstance"
+          },
+          {
+            "name": "PUBLIC_VISITOR_QUOTA",
+            "class_name": "PublicVisitorQuota"
           }
         ]
       },
@@ -110,7 +145,7 @@
         "DSH_EDGE_CONTAINER_RUNTIME": "enabled",
         "DSH_EDGE_PUBLIC_CHAT": "enabled",
         "DSH_EDGE_PUBLIC_MAX_TOKENS": "1024",
-        "DEEPSEEK_MODEL": "deepseek-flash"
+        "WORKERS_AI_MODEL": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b"
       },
       "containers": [
         {
@@ -136,13 +171,30 @@
       ],
       "observability": {
         "enabled": false
-      }
+      },
+      "ai": {
+        "binding": "AI"
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_sqlite_classes": [
+            "DshEdgeInstance"
+          ]
+        },
+        {
+          "tag": "v2-public-visitor-quota",
+          "new_sqlite_classes": [
+            "PublicVisitorQuota"
+          ]
+        }
+      ]
     }
   },
   "vars": {
     "DSH_EDGE_PUBLIC_CHAT": "enabled",
     "DSH_EDGE_PUBLIC_MAX_TOKENS": "1024",
-    "DEEPSEEK_MODEL": "deepseek-flash"
+    "WORKERS_AI_MODEL": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b"
   },
   "ratelimits": [
     {
@@ -153,5 +205,8 @@
         "period": 60
       }
     }
-  ]
+  ],
+  "ai": {
+    "binding": "AI"
+  }
 }
