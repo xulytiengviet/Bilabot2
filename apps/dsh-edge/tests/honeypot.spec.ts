@@ -62,6 +62,24 @@ describe('anonymous privacy-preserving honeypot', () => {
     expect(Array.from(attempts.values())).toEqual([6])
   })
 
+  it('does not allow malicious cross-site images to penalize a visitor IP', async () => {
+    const seen: string[] = []
+    const response = await handleHoneypotRequest(new Request(url + '/.env', {
+      headers: {
+        'cf-connecting-ip': '192.0.2.42',
+        'sec-fetch-site': 'cross-site',
+        'sec-fetch-dest': 'image',
+      },
+    }), {
+      DEEPSEEK_API_KEY: secret,
+      PUBLIC_CHAT_RATE_LIMITER: { limit: async ({ key }) => {
+        seen.push(key); return { success: true }
+      } },
+    })
+    expect(response.status).toBe(404)
+    expect(seen).toEqual([])
+  })
+
   it('never requires a D1 database, Cloudflare API token or webhook for decoy paths', async () => {
     const seen: string[] = []
     const response = await handleHoneypotRequest(new Request(url + '/phpmyadmin', {
