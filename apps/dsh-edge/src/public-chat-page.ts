@@ -5,7 +5,7 @@
 export const publicChatHtml = `<!doctype html>
 <html lang="vi"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="no-referrer"><meta name="application-version" content="20261027-thinking-label-v3"><meta name="theme-color" content="#f8fafc">
+<meta name="referrer" content="no-referrer"><meta name="application-version" content="20261027-public-reason-v4"><meta name="theme-color" content="#f8fafc">
 <title>BilaBot</title>
 <style>
 :root{color-scheme:light;--page:#f6f8fc;--paper:#fff;--ink:#19243c;--muted:#66758d;--line:#e4eaf3;--accent:#245cbd;--light:#eaf2ff;--cyan:#069aab;--shadow:0 14px 50px rgba(37,65,118,.045);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
@@ -85,13 +85,13 @@ button:disabled{opacity:.55;cursor:not-allowed}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 
 /* Luồng tiến trình CVNSS4.0, câu trả lời Unicode đọc được, an toàn XSS. */
-.reasoning-panel{margin:6px 0 14px;border:1px solid #dce9f8;border-radius:14px;background:#f8fbff;overflow:hidden}
+.reasoning-panel{margin:6px 0 14px;border:1px solid #e2eaf5;border-radius:14px;background:#f9fbff;overflow:hidden;box-shadow:0 3px 12px #12376508}
 .reasoning-panel summary{display:flex;align-items:center;gap:9px;list-style:none;cursor:pointer;padding:11px 13px;font-size:12px;font-weight:700;color:#315f94}
 .reasoning-panel summary::-webkit-details-marker{display:none}
 .reason-symbol{color:#159bb9;font-size:18px;line-height:1}
 .reason-status{margin-left:auto;color:#188566;border:1px solid #cfe9e1;background:#eaf8f2;border-radius:99px;padding:3px 9px;font-size:10px;white-space:nowrap}
 .reasoning-panel.streaming .reason-status{background:#e7f2ff;color:#286ba9;border-color:#d3e6ff;animation:bila-pulse 1.45s ease-in-out infinite}
-.reason-code{margin:0;background:#10243e;color:#9bdaf2;border-top:1px solid #dce7f5;padding:13px 15px;font:12px/1.8 Consolas,monospace;max-height:220px;overflow-y:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.reason-code{margin:0;background:#f9fbff;color:#506a86;border-top:1px solid #e7eef8;border-left:2px solid #bcd8f4;padding:14px 16px;font:12.5px/1.95 Consolas,monospace;max-height:295px;overflow-y:auto;white-space:pre-wrap;overflow-wrap:anywhere}
 .pending-answer{font-style:italic;color:#8a99ac!important}
 .rich-answer{white-space:normal;line-height:1.8}
 .rich-answer p{margin:0 0 12px}.rich-answer p:last-child{margin-bottom:0}
@@ -134,7 +134,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 </form><p id="notice" class="notice" role="status" aria-live="polite" hidden></p><p class="disclaimer">Tối đa 10 câu hỏi tổng cộng cho mỗi IP · Tối đa 5 yêu cầu/phút. Đừng gửi dữ liệu nhạy cảm.</p><p class="quota-info" id="quota-info" aria-live="polite" hidden></p></div>
 <footer class="credits">@2026, <strong>Trần Tư Bình</strong> và <strong>Kiều Trường Lâm</strong> phát kiến CVNSS4.0 <span class="credit-sep">·</span> Nguồn: <strong>Long Ngo</strong> phát triển · Giấy phép MIT</footer>
 </main></div>
-<script src="/public/cvnss.js?v=20261027-thinking-label-v3" defer></script><script src="/public/app.js?v=20261027-thinking-label-v3" defer></script>
+<script src="/public/cvnss.js?v=20261027-public-reason-v4" defer></script><script src="/public/app.js?v=20261027-public-reason-v4" defer></script>
 </body></html>`;
 
 export const publicChatJavascript = String.raw`'use strict';
@@ -150,7 +150,7 @@ export const publicChatJavascript = String.raw`'use strict';
   const traceStart = 'Đã tiếp nhận câu hỏi.\nĐã chuẩn bị ngữ cảnh hội thoại.\nĐang chờ Cloudflare Workers AI trả lời.';
   const traceDone = 'Đã tiếp nhận câu hỏi.\nĐã gửi yêu cầu tới Cloudflare Workers AI.\nĐã nhận câu trả lời từ mô hình.\nĐã hoàn thiện nội dung tiếng Việt Unicode.';
   const cleanAnswer = raw => String(raw || '').replace(/<think>[\s\S]*?<\/think>/giu, '')
-    .replace(/<think>[\s\S]*$/giu, '').trim().normalize('NFC');
+    .replace(/<think>[\s\S]*$/giu, '').replace(/<\/final_answer>\s*$/giu, '').trim().normalize('NFC');
   function appendInline(target, raw) {
     const value = String(raw).replace(/\\([*#_])/g, '$1');
     const rx = /(\*\*[^*\n]+?\*\*|__[^_\n]+?__|\x60[^\x60\n]+\x60|\*[^*\n]+?\*|\[[^\]\n]+\]\(https?:\/\/[^\s)]+\))/g;
@@ -250,12 +250,16 @@ export const publicChatJavascript = String.raw`'use strict';
     flush();
     if (inCode) flushCode();
   }
-  function updateProgress(card, message, seconds) {
+  function updateProgress(card, message, seconds, note) {
     if (!card || !card.isConnected) return;
+    if (typeof note === 'string') card.dataset.publicNotes = note.slice(0, 2400);
     const status = card.querySelector('.reason-status');
     const content = card.querySelector('.reason-code');
     if (status) status.textContent = message;
-    if (content) content.textContent = cvssPreview(traceStart + (seconds == null ? '' : '\nThời gian xử lý: ' + seconds + ' giây.'));
+    if (content) {
+      const text = (card.dataset.publicNotes || '').trim();
+      content.textContent = cvssPreview(text || traceStart);
+    }
   }
 
   let chats = [], current = '', busy = false;
@@ -357,7 +361,14 @@ export const publicChatJavascript = String.raw`'use strict';
     $('messages').replaceChildren();
     const messages = active()?.messages || [];
     if (messages.length === 0) $('messages').append(hero());
-    else for (const m of messages) $('messages').append(createMessage(m));
+    else for (const [i, m] of messages.entries()) {
+      const item = createMessage(m);
+      if (i === messages.length - 1 && m.role === 'assistant' && m.trace) {
+        const details = item.querySelector('.reasoning-panel');
+        if (details) details.open = true;
+      }
+      $('messages').append(item);
+    }
     $('messages').scrollTop = $('messages').scrollHeight;
   }
   function lock(value) {
@@ -395,7 +406,7 @@ export const publicChatJavascript = String.raw`'use strict';
     updateProgress(card, 'Đang nhận dữ liệu');
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '', draft = '', complete = false, remaining;
+    let buffer = '', draft = '', publicNotes = '', complete = false, remaining;
     try {
       while (true) {
         const part = await reader.read();
@@ -412,7 +423,12 @@ export const publicChatJavascript = String.raw`'use strict';
           if (!source) continue;
           let event;
           try { event = JSON.parse(source); } catch { continue; }
-          if (event.type === 'status' && !draft) updateProgress(card, 'AI đang phản hồi');
+          if (event.type === 'status' && !draft) updateProgress(card, 'Đang phân tích câu hỏi');
+          if (event.type === 'trace_delta' && typeof event.text === 'string') {
+            publicNotes = (publicNotes + event.text).slice(0, 2400);
+            updateProgress(card, 'Đang giải thích · CVNSS4.0', null, publicNotes);
+            $('messages').scrollTop = $('messages').scrollHeight;
+          }
           if (event.type === 'delta' && typeof event.text === 'string') {
             draft += event.text;
             renderAnswer(label, draft);
@@ -427,7 +443,7 @@ export const publicChatJavascript = String.raw`'use strict';
         }
       }
       if (!complete || !draft.trim()) throw new Error('Kết nối AI bị gián đoạn trước khi hoàn tất. Vui lòng thử lại.');
-      return { ok: true, answer: draft.normalize('NFC'), remaining };
+      return { ok: true, answer: cleanAnswer(draft), trace: publicNotes.trim(), remaining };
     } finally {
       reader.releaseLock();
     }
@@ -477,7 +493,7 @@ export const publicChatJavascript = String.raw`'use strict';
         signal: controller.signal
       });
       const data = await readAnswer(response, live);
-      c.messages.push({ role: 'assistant', content: cleanAnswer(data.answer), trace: traceDone, elapsed: Math.max(1, Math.round((Date.now() - started) / 1000)) });
+      c.messages.push({ role: 'assistant', content: cleanAnswer(data.answer), trace: String(data.trace || live.dataset.publicNotes || '').trim().slice(0, 2400) || traceDone, elapsed: Math.max(1, Math.round((Date.now() - started) / 1000)) });
       showNotice('');
       if (typeof data.remaining === 'number') {
         $('quota-info').textContent = data.remaining > 0
