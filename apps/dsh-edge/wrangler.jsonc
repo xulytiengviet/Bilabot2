@@ -20,8 +20,8 @@
       "/",
       "/login",
       "/public",
-      "/public/app.js",
-      "/owner"
+      "/owner",
+      "/public/*"
     ]
   },
   "durable_objects": {
