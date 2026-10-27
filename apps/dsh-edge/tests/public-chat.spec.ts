@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { runInNewContext } from 'node:vm'
 import { handlePublicChatRoute, isPublicChatEnabled, publicMaxTokens, validatePublicMessages } from '../src/public-chat.ts'
 import { cvnssConverterSource } from '../src/cvnss-converter-bundle.ts'
 import { publicChatHtml, publicChatJavascript } from '../src/public-chat-page.ts'
@@ -41,6 +42,15 @@ describe('anonymous chat boundary', () => {
     expect(response.headers.get('content-type')).toContain('text/javascript')
     expect(await response.text()).toBe(cvnssConverterSource)
     expect(cvnssConverterSource).toContain('5.0.0-audit-safe')
+  })
+  it('passes the audited CVNSS4.0 converter self-test independently', () => {
+    const context: { CVNSSConverter?: {
+      selfTest: () => { ok: boolean; failures: unknown[] };
+      fromCqn: (input: string) => { cvss: string };
+    } } = {}
+    runInNewContext(cvnssConverterSource, context)
+    expect(context.CVNSSConverter?.selfTest()).toMatchObject({ ok: true, failures: [] })
+    expect(context.CVNSSConverter?.fromCqn('Tôi yêu tiếng Việt.').cvss).toBe('Toiy iwy tizb Vidf.')
   })
   it('rejects cross-origin and does not call upstream', async () => {
     const response = await handlePublicChatRoute(new Request('https://test.example/api/public/chat', {
