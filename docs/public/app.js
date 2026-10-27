@@ -191,7 +191,7 @@
       const symbol = document.createElement('span'); symbol.className = 'reason-symbol'; symbol.textContent = '◈';
       const heading = document.createElement('span'); heading.textContent = 'Tiến trình AI · CVNSS4.0';
       const status = document.createElement('span'); status.className = 'reason-status';
-      status.textContent = msg.pending ? 'Đang xử lý' : 'Hoàn tất';
+      status.textContent = msg.pending ? 'Đang xử lý' : (msg.elapsed ? msg.elapsed + ' giây' : 'Hoàn tất');
       summary.append(symbol, heading, status);
       const pre = document.createElement('pre'); pre.className = 'reason-code';
       pre.textContent = cvssPreview(msg.trace || traceStart);
@@ -338,7 +338,7 @@
         signal: controller.signal
       });
       const data = await readAnswer(response, live);
-      c.messages.push({ role: 'assistant', content: cleanAnswer(data.answer), trace: traceDone });
+      c.messages.push({ role: 'assistant', content: cleanAnswer(data.answer), trace: traceDone, elapsed: Math.max(1, Math.round((Date.now() - started) / 1000)) });
       showNotice('');
       if (typeof data.remaining === 'number') {
         $('quota-info').textContent = data.remaining > 0
