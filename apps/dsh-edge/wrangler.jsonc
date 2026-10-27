@@ -30,8 +30,7 @@
       "/xmlrpc.php",
       "/phpmyadmin",
       "/phpmyadmin/",
-      "/admin-secret-panel",
-      "/api/internal/debug"
+      "/admin-secret-panel"
     ]
   },
   "durable_objects": {
