@@ -1,8 +1,9 @@
 import { DurableObject } from 'cloudflare:workers'
 import { PUBLIC_VISITOR_MAX_QUESTIONS, quotaAvailable, bytesToHex } from './visitor-quota-core.ts'
-const RESERVATION_TTL_MS = 120_000
 import type { QuotaResult } from './visitor-quota-core.ts'
-type QuotaInput = { ip: string; token?: string; success?: boolean }
+
+const RESERVATION_TTL_MS = 120_000
+type QuotaInput = { ip: string; token?: string | undefined; success?: boolean | undefined }
 
 export class PublicVisitorQuota extends DurableObject {
   private readonly ready: Promise<void>
