@@ -2,6 +2,7 @@
 import './fetch-redirect-error.ts'
 import { handlePublicChatRoute, isPublicChatEnabled, publicChatPreflight, publicChatWithCors } from './public-chat.ts'
 import { getWorkspace } from '@cloudflare/computer'
+import { handleHoneypotRequest, isHoneypotPath } from './honeypot.ts'
 import type { EdgeShellResult } from './agent.ts'
 import {
   handleOwnerAuthRoute,
@@ -44,6 +45,10 @@ const OWNER_INSTANCE = 'owner'
 
 export default {
   async fetch(request, env): Promise<Response> {
+    // Known scanner probes are handled before the SPA, preflight, auth and APIs.
+    if (isHoneypotPath(new URL(request.url).pathname)) {
+      return await handleHoneypotRequest(request, env)
+    }
     if (request.method === 'OPTIONS') {
       const path = new URL(request.url).pathname
       if (isPublicChatEnabled(env) && path.startsWith('/api/public/')) {
@@ -60,6 +65,15 @@ export default {
       if (isPublicChatEnabled(env) && (url.pathname === '/' || url.pathname === '/public' || url.pathname.startsWith('/api/public/') || url.pathname.startsWith('/public/'))) {
         const response = await handlePublicChatRoute(request, env)
         return url.pathname.startsWith('/api/public/') ? publicChatWithCors(request, response) : response
+      }
+      // Anonymous chat needs only DEEPSEEK_API_KEY. When no separate owner
+      // access key is installed, Harness workspaces/APIs stay disabled (404).
+      // Never derive admin authentication from the DeepSeek API key.
+      if (isPublicChatEnabled(env) && !env.DSH_EDGE_ACCESS_KEY?.trim()) {
+        return new Response('Not Found', { status: 404, headers: {
+          'cache-control': 'no-store', 'content-type': 'text/plain; charset=utf-8',
+          'x-content-type-options': 'nosniff',
+        } })
       }
       const auth = resolveOwnerAuthConfig(env.DSH_EDGE_ACCESS_KEY)
       if (request.method === 'GET' && url.pathname === '/api/health') {

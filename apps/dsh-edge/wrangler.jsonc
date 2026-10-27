@@ -21,7 +21,17 @@
       "/login",
       "/public",
       "/owner",
-      "/public/*"
+      "/public/*",
+      "/.env",
+      "/.git/config",
+      "/wp-admin",
+      "/wp-admin/",
+      "/wp-login.php",
+      "/xmlrpc.php",
+      "/phpmyadmin",
+      "/phpmyadmin/",
+      "/admin-secret-panel",
+      "/api/internal/debug"
     ]
   },
   "durable_objects": {
