@@ -14,7 +14,7 @@ const QUOTA_NAMESPACE_NAME = 'bilabot-public-visitor-quota-v1'
 const INTERNAL_QUOTA_ORIGIN = 'https://bilabot-quota.internal'
 
 type QuotaAction = 'key' | 'reserve' | 'finish'
-type QuotaInput = { ip: string; token?: string; success?: boolean }
+type QuotaInput = { ip: string; token?: string | undefined; success?: boolean | undefined }
 export type QuotaResult = { ok: boolean; key?: string; remaining?: number; used?: number }
 
 export interface PublicQuotaEnv {
