@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { runInNewContext } from 'node:vm'
-import { handlePublicChatRoute, isPublicChatEnabled, publicMaxTokens, validatePublicMessages } from '../src/public-chat.ts'
+import { handlePublicChatRoute, isPublicChatEnabled, publicChatPreflight, publicChatWithCors, publicMaxTokens, validatePublicMessages } from '../src/public-chat.ts'
 import { cvnssConverterSource } from '../src/cvnss-converter-bundle.ts'
 import { publicChatHtml, publicChatJavascript } from '../src/public-chat-page.ts'
 
@@ -51,6 +51,43 @@ describe('anonymous chat boundary', () => {
     runInNewContext(cvnssConverterSource, context)
     expect(context.CVNSSConverter?.selfTest()).toMatchObject({ ok: true, failures: [] })
     expect(context.CVNSSConverter?.fromCqn('Tôi yêu tiếng Việt.').cvss).toBe('Toiy iwy tizb Vidf.')
+  })
+
+  it('accepts preflight exclusively from trusted GitHub Pages origin', () => {
+    const uri = 'https://bilabot2.example/api/public/chat'
+    const legit = new Request(uri, { method: 'OPTIONS', headers: {
+      origin: 'https://xulytiengviet.github.io',
+      'access-control-request-method': 'POST',
+      'access-control-request-headers': 'content-type'
+    } })
+    const pass = publicChatPreflight(legit)
+    expect(pass.status).toBe(204)
+    expect(pass.headers.get('access-control-allow-origin')).toBe('https://xulytiengviet.github.io')
+    const evil = publicChatPreflight(new Request(uri, { method: 'OPTIONS', headers: {
+      origin: 'https://evil.example', 'access-control-request-method': 'POST'
+    } }))
+    expect(evil.status).toBe(403)
+  })
+
+  it('returns allowlisted CORS on public API responses only', async () => {
+    const uri = 'https://bilabot2.example/api/public/config'
+    const r = new Request(uri, { headers: { origin: 'https://xulytiengviet.github.io' } })
+    const response = await handlePublicChatRoute(r, { DEEPSEEK_API_KEY: 'secret-test' })
+    const cors = publicChatWithCors(r, response)
+    expect(cors.headers.get('access-control-allow-origin')).toBe('https://xulytiengviet.github.io')
+    expect(cors.headers.get('vary')).toContain('Origin')
+    expect((await cors.text())).not.toContain('secret-test')
+    const untrusted = new Request(uri, { headers: { origin: 'https://attacker.invalid' } })
+    const blocked = publicChatWithCors(untrusted, response.clone())
+    expect(blocked.headers.has('access-control-allow-origin')).toBe(false)
+  })
+
+  it('GitHub Pages origin reaches guarded chat without bypassing rate limits', async () => {
+    const response = await handlePublicChatRoute(new Request('https://bilabot2.example/api/public/chat', {
+      method: 'POST', headers: { origin: 'https://xulytiengviet.github.io', 'content-type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: 'Xin chào' }] })
+    }), { DEEPSEEK_API_KEY: 'secret-test' })
+    expect(response.status).toBe(503) // Missing limiter stays fail-closed.
   })
   it('rejects cross-origin and does not call upstream', async () => {
     const response = await handlePublicChatRoute(new Request('https://test.example/api/public/chat', {
