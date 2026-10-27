@@ -6,6 +6,7 @@ import { resolveEdgeModel } from './deepseek.ts'
 import { EdgeHttpError, readJsonObject } from './http.ts'
 import { publicChatHtml, publicChatJavascript } from './public-chat-page.ts'
 import { cvnssConverterSource } from './cvnss-converter-bundle.ts'
+import { privateRateLimitKey } from './honeypot.ts'
 
 export interface PublicChatEnv {
   DSH_EDGE_PUBLIC_CHAT?: string
@@ -158,8 +159,9 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
     const maxTokens = publicMaxTokens(env.DSH_EDGE_PUBLIC_MAX_TOKENS)
     const payload = await readJsonObject(request, MAX_BODY_BYTES)
     const messages = validatePublicMessages(payload.messages)
-    const ip = request.headers.get('cf-connecting-ip') ?? 'unknown'
-    const limited = await env.PUBLIC_CHAT_RATE_LIMITER.limit({ key: `public-chat:${ip}` })
+    const rateKey = await privateRateLimitKey(request, env.DEEPSEEK_API_KEY)
+    // Requests outside the Cloudflare edge share one conservative fallback bucket.
+    const limited = await env.PUBLIC_CHAT_RATE_LIMITER.limit({ key: rateKey ?? 'public-chat:missing-client-ip' })
     if (!limited.success) return error(429, 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau một phút.')
 
     const upstream = await fetch(MODEL_ENDPOINT, {
