@@ -5,7 +5,7 @@
 export const publicChatHtml = `<!doctype html>
 <html lang="vi"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="no-referrer"><meta name="theme-color" content="#f8fafc">
+<meta name="referrer" content="no-referrer"><meta name="application-version" content="20261027-progress-v2"><meta name="theme-color" content="#f8fafc">
 <title>BilaBot</title>
 <style>
 :root{color-scheme:light;--page:#f6f8fc;--paper:#fff;--ink:#19243c;--muted:#66758d;--line:#e4eaf3;--accent:#245cbd;--light:#eaf2ff;--cyan:#069aab;--shadow:0 14px 50px rgba(37,65,118,.045);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
@@ -134,7 +134,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 </form><p id="notice" class="notice" role="status" aria-live="polite" hidden></p><p class="disclaimer">Tối đa 10 câu hỏi tổng cộng cho mỗi IP · Tối đa 5 yêu cầu/phút. Đừng gửi dữ liệu nhạy cảm.</p><p class="quota-info" id="quota-info" aria-live="polite" hidden></p></div>
 <footer class="credits">@2026, <strong>Trần Tư Bình</strong> và <strong>Kiều Trường Lâm</strong> phát kiến CVNSS4.0 <span class="credit-sep">·</span> Nguồn: <strong>Long Ngo</strong> phát triển · Giấy phép MIT</footer>
 </main></div>
-<script src="/public/cvnss.js" defer></script><script src="/public/app.js" defer></script>
+<script src="/public/cvnss.js?v=20261027-progress-v2" defer></script><script src="/public/app.js?v=20261027-progress-v2" defer></script>
 </body></html>`;
 
 export const publicChatJavascript = String.raw`'use strict';
@@ -330,7 +330,7 @@ export const publicChatJavascript = String.raw`'use strict';
       const symbol = document.createElement('span'); symbol.className = 'reason-symbol'; symbol.textContent = '◈';
       const heading = document.createElement('span'); heading.textContent = 'Tiến trình AI · CVNSS4.0';
       const status = document.createElement('span'); status.className = 'reason-status';
-      status.textContent = msg.pending ? 'Đang xử lý' : 'Hoàn tất';
+      status.textContent = msg.pending ? 'Đang xử lý' : (msg.elapsed ? msg.elapsed + ' giây' : 'Hoàn tất');
       summary.append(symbol, heading, status);
       const pre = document.createElement('pre'); pre.className = 'reason-code';
       pre.textContent = cvssPreview(msg.trace || traceStart);
@@ -477,7 +477,7 @@ export const publicChatJavascript = String.raw`'use strict';
         signal: controller.signal
       });
       const data = await readAnswer(response, live);
-      c.messages.push({ role: 'assistant', content: cleanAnswer(data.answer), trace: traceDone });
+      c.messages.push({ role: 'assistant', content: cleanAnswer(data.answer), trace: traceDone, elapsed: Math.max(1, Math.round((Date.now() - started) / 1000)) });
       showNotice('');
       if (typeof data.remaining === 'number') {
         $('quota-info').textContent = data.remaining > 0
