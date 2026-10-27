@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aiStreamDelta, createThinkFilter, readAiStream, sseFrame } from '../src/public-ai-stream.ts'
+import { aiStreamDelta, createThinkFilter, createPublicTraceSplitter, readAiStream, sseFrame } from '../src/public-ai-stream.ts'
 import { handlePublicChatRoute } from '../src/public-chat.ts'
 import type { PublicChatEnv } from '../src/public-chat.ts'
 
@@ -35,6 +35,36 @@ describe('Cloudflare Workers AI incremental streaming', () => {
       filter.push(' thought</think>Xin ch') + filter.push('ào bạn!') + filter.finish()
     expect(out).toBe('Xin chào bạn!')
     expect(out).not.toContain('private')
+  })
+
+  it('streams only question-specific public summaries and a separate final answer across fragmented tags', () => {
+    const filter = createThinkFilter()
+    const parser = createPublicTraceSplitter()
+    const source = '<think>Không công khai dữ liệu riêng</think><public_steps>\n- Phân tích dữ kiện CVNSS4.0.\n- Đối chiếu ý nghĩa các thuật ngữ.\n</public_steps><final_answer>Đây là trả lời cuối.</final_answer>'
+    let publicTrace = '', answer = ''
+    for (let index = 0; index < source.length; index += 3) {
+      const safe = filter.push(source.slice(index, index + 3))
+      const part = parser.push(safe)
+      publicTrace += part.trace
+      answer += part.answer
+    }
+    const filteredEnd = parser.push(filter.finish())
+    publicTrace += filteredEnd.trace
+    answer += filteredEnd.answer
+    const finish = parser.finish()
+    publicTrace += finish.trace
+    answer += finish.answer
+    expect(publicTrace).toContain('Phân tích dữ kiện CVNSS4.0')
+    expect(publicTrace).not.toContain('Không công khai')
+    expect(answer).toContain('Đây là trả lời cuối.')
+    expect(answer).not.toContain('public_steps')
+  })
+  it('falls back to a plain answer when the model does not follow the public-summary format', () => {
+    const parser = createPublicTraceSplitter()
+    const response = parser.push('**Câu trả lời bình thường**')
+    const tail = parser.finish()
+    expect(response.trace + tail.trace).toBe('')
+    expect(response.answer + tail.answer).toBe('**Câu trả lời bình thường**')
   })
   it('formats a complete JSON SSE frame', () => {
     const str = new TextDecoder().decode(sseFrame({ type: 'delta', text: 'Xin chào' }))
