@@ -10,8 +10,8 @@
  *
  * Rate limiting is approximate per Cloudflare location, NOT a firewall ban.
  */
-import { quotaCall } from './visitor-quota.ts'
-import type { PublicQuotaEnv } from './visitor-quota.ts'
+import { quotaCall } from './visitor-quota-core.ts'
+import type { PublicQuotaEnv } from './visitor-quota-core.ts'
 
 export interface HoneypotEnv extends PublicQuotaEnv {
   PUBLIC_CHAT_RATE_LIMITER?: { limit: (input: { key: string }) => Promise<{ success: boolean }> }
