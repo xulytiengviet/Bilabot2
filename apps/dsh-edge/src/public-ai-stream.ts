@@ -87,3 +87,68 @@ export async function* readAiStream(stream: ReadableStream<Uint8Array>): AsyncGe
     reader.releaseLock()
   }
 }
+
+
+/**
+ * Tách các bước tóm tắt công khai do model chủ động tạo khỏi câu trả lời.
+ * Luồng này chỉ nhận văn bản đã qua bộ lọc <think>.
+ * Nếu model không sinh nhãn, vẫn phát câu trả lời bình thường.
+ */
+export function createPublicTraceSplitter() {
+  const OPEN = '<public_steps>'
+  const CLOSE = '</public_steps>'
+  const ANSWER = '<final_answer>'
+  let phase = 'start'
+  let pending = ''
+  function ingest(chunk, final = false) {
+    pending += chunk
+    let trace = '', answer = ''
+    for (let count = 0; count < 8; count++) {
+      if (phase === 'start') {
+        const text = pending.trimStart()
+        if (!text) { if (final) pending = ''; break }
+        if (text.startsWith(OPEN)) {
+          pending = text.slice(OPEN.length)
+          phase = 'steps'
+          continue
+        }
+        if (!final && OPEN.startsWith(text)) break
+        phase = 'answer'
+        continue
+      }
+      if (phase === 'steps') {
+        const end = pending.indexOf(CLOSE)
+        if (end >= 0) {
+          trace += pending.slice(0, end)
+          pending = pending.slice(end + CLOSE.length)
+          phase = 'before-answer'
+          continue
+        }
+        if (final) { answer += pending; pending = ''; phase = 'answer'; break }
+        const safe = Math.max(0, pending.length - CLOSE.length + 1)
+        trace += pending.slice(0, safe)
+        pending = pending.slice(safe)
+        break
+      }
+      if (phase === 'before-answer') {
+        const text = pending.trimStart()
+        if (!text) { if (final) pending = ''; break }
+        if (text.startsWith(ANSWER)) {
+          pending = text.slice(ANSWER.length)
+          phase = 'answer'
+          continue
+        }
+        if (!final && ANSWER.startsWith(text)) break
+        phase = 'answer'
+        continue
+      }
+      if (phase === 'answer') {
+        answer += pending
+        pending = ''
+        break
+      }
+    }
+    return { trace, answer }
+  }
+  return { push: value => ingest(value), finish: () => ingest('', true) }
+}
