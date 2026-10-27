@@ -6,6 +6,7 @@ import { EdgeHttpError, readJsonObject } from './http.ts'
 import { publicChatHtml, publicChatJavascript } from './public-chat-page.ts'
 import { cvnssConverterSource } from './cvnss-converter-bundle.ts'
 import { PUBLIC_VISITOR_MAX_QUESTIONS, quotaCall } from './visitor-quota-core.ts'
+import { createThinkFilter, readAiStream, sseFrame } from './public-ai-stream.ts'
 import type { PublicQuotaEnv } from './visitor-quota-core.ts'
 
 export interface PublicChatEnv extends PublicQuotaEnv {
@@ -130,11 +131,22 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
     return new Response(cvnssConverterSource, { headers: headers('text/javascript; charset=utf-8') })
   }
   if (request.method === 'GET' && url.pathname === '/api/public/config') {
+    const bindingsReady = Boolean(env.AI && env.PUBLIC_VISITOR_QUOTA && env.PUBLIC_CHAT_RATE_LIMITER)
+    // A declared binding alone can misleadingly report ready:true when a new
+    // SQLite DO class failed to initialize. Check the real quota service.
+    let quotaReady = false
+    if (bindingsReady) {
+      try {
+        const ping = await quotaCall(env, request, 'key')
+        quotaReady = ping.ok && typeof ping.key === 'string'
+      } catch { /* Do not reveal platform or IP details. */ }
+    }
     return result({
       ok: true,
       model: PUBLIC_AI_MODEL,
       provider: 'workers-ai',
-      ready: Boolean(env.AI && env.PUBLIC_VISITOR_QUOTA && env.PUBLIC_CHAT_RATE_LIMITER),
+      ready: bindingsReady && quotaReady,
+      quotaReady,
       maxQuestionsPerIp: PUBLIC_VISITOR_MAX_QUESTIONS,
     })
   }
@@ -182,6 +194,19 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
         { role: 'system', content: 'Bạn là Trợ lý Bila, trả lời bằng tiếng Việt Unicode NFC, ngắn gọn, chính xác. CVNSS4.0 là hệ ký hiệu văn bản bổ trợ ở giao diện; không mô tả suy luận nội bộ của AI. Không hiển thị phần suy luận riêng tư.' },
         ...messages,
       ]
+      if (request.headers.get('accept')?.includes('text/event-stream')) {
+        // Streaming starts showing answer tokens without waiting for the
+        // reasoning model to finish its entire output. Legacy JSON stays intact.
+        const source = await env.AI.run(PUBLIC_AI_MODEL, {
+          messages: prompt,
+          max_tokens: maxTokens,
+          stream: true,
+        })
+        if (!source || typeof (source as ReadableStream<Uint8Array>).getReader !== 'function') {
+          throw new Error('Workers AI did not return an SSE stream.')
+        }
+        return streamPublicAnswer(source as ReadableStream<Uint8Array>, env, request, token)
+      }
       const reply = await env.AI.run(PUBLIC_AI_MODEL, {
         messages: prompt,
         max_tokens: maxTokens,
@@ -223,4 +248,73 @@ export function isFreeTierAllowanceError(cause: unknown): boolean {
   if (typeof obj.message === 'string' &&
       /3036|daily free allocation|free tier.*exceed|10[,]?000 neurons|account limited/iu.test(obj.message)) return true
   return Boolean(obj.cause && obj.cause !== cause && isFreeTierAllowanceError(obj.cause))
+}
+
+/**
+ * Stream only the public answer to browsers; the quota is committed exactly
+ * once after receiving a complete nonempty answer, then a done event is sent.
+ * On an AI failure or disconnect, refund the reservation. No prompts are logged.
+ */
+function streamPublicAnswer(
+  source: ReadableStream<Uint8Array>,
+  env: PublicChatEnv,
+  request: Request,
+  token: string,
+): Response {
+  let disconnected = false
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      void (async () => {
+        let answered = ''
+        const filter = createThinkFilter()
+        try {
+          controller.enqueue(sseFrame({ type: 'status', text: 'Bila đang soạn câu trả lời…' }))
+          for await (const raw of readAiStream(source)) {
+            if (disconnected) throw new Error('Client disconnected')
+            const safeText = filter.push(raw)
+            if (safeText) {
+              answered += safeText
+              controller.enqueue(sseFrame({ type: 'delta', text: safeText }))
+            }
+          }
+          const tail = filter.finish()
+          if (tail) {
+            answered += tail
+            controller.enqueue(sseFrame({ type: 'delta', text: tail }))
+          }
+          if (!answered.trim()) throw new Error('Empty answer')
+          const committed = await quotaCall(env, request, 'finish', token, true)
+          if (!committed.ok) throw new Error('Quota commit did not succeed')
+          controller.enqueue(sseFrame({
+            type: 'done', remaining: committed.remaining,
+            maxQuestionsPerIp: PUBLIC_VISITOR_MAX_QUESTIONS,
+          }))
+        } catch (cause) {
+          await quotaCall(env, request, 'finish', token, false).catch(() => undefined)
+          if (!disconnected) {
+            controller.enqueue(sseFrame({
+              type: 'error',
+              message: isFreeTierAllowanceError(cause)
+                ? 'Hạn mức AI miễn phí của Cloudflare hôm nay đã hết. Vui lòng thử lại sau 07:00 (giờ Việt Nam).'
+                : 'Bila tạm thời chưa trả lời được. Bạn chưa bị trừ lượt hỏi.',
+            }))
+          }
+        } finally {
+          if (!disconnected) controller.close()
+        }
+      })().catch(() => {
+        // Keep no diagnostic logs of prompt, identity, headers or provider body.
+        if (!disconnected) {
+          try { controller.close() } catch { /* already closed */ }
+        }
+      })
+    },
+    cancel() {
+      disconnected = true
+      void source.cancel().catch(() => undefined)
+    },
+  })
+  const h = headers('text/event-stream; charset=utf-8')
+  h.set('x-accel-buffering', 'no')
+  return new Response(stream, { headers: h })
 }

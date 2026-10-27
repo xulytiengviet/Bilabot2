@@ -112,10 +112,71 @@
     $('send').textContent = value ? 'Đang trả lời…' : 'Gửi ↗';
   }
   function boundedContext(messages) {
-    const a = messages.filter(validMessage).slice(-19);
+    // Older clients could leave consecutive user-only messages after failed
+    // API calls. Send only alternating roles to the AI backend.
+    const a = [];
+    for (const message of messages.filter(validMessage).slice(-19)) {
+      if (a.length && a[a.length - 1].role === message.role) a[a.length - 1] = message;
+      else a.push(message);
+    }
     let total = a.reduce((n, m) => n + m.content.length, 0);
     while (total > 26000 && a.length > 1) total -= a.shift().content.length;
     return a;
+  }
+  async function readAnswer(response) {
+    const kind = response.headers.get('content-type') || '';
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Không thể kết nối dịch vụ Bila.');
+    }
+    // Backward-compatible path for older Worker deployments.
+    if (!kind.includes('text/event-stream')) {
+      const data = await response.json();
+      if (!data.ok || !data.answer) throw new Error(data.error || 'Dịch vụ chưa trả lời.');
+      return data;
+    }
+    if (!response.body) throw new Error('Không nhận được luồng trả lời.');
+    const card = createMessage({ role: 'assistant', content: '' });
+    const label = card.querySelector('.msg-text');
+    label.textContent = 'Bila đang kết nối tới AI…';
+    $('messages').append(card);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '', draft = '', complete = false, remaining;
+    try {
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        buffer += decoder.decode(part.value, { stream: true });
+        if (buffer.length > 131072) throw new Error('Luồng trả lời không hợp lệ.');
+        while (true) {
+          const match = /\r?\n\r?\n/.exec(buffer);
+          if (!match) break;
+          const chunk = buffer.slice(0, match.index);
+          buffer = buffer.slice(match.index + match[0].length);
+          const source = chunk.split(/\r?\n/).filter(line => line.startsWith('data:'))
+            .map(line => line.slice(5).trimStart()).join('\n');
+          if (!source) continue;
+          let event;
+          try { event = JSON.parse(source); } catch { continue; }
+          if (event.type === 'status' && !draft) label.textContent = event.text || 'Bila đang xử lý…';
+          if (event.type === 'delta' && typeof event.text === 'string') {
+            draft += event.text;
+            label.textContent = draft.normalize('NFC');
+            $('messages').scrollTop = $('messages').scrollHeight;
+          }
+          if (event.type === 'error') throw new Error(event.message || 'Yêu cầu thất bại.');
+          if (event.type === 'done') {
+            complete = true;
+            remaining = event.remaining;
+          }
+        }
+      }
+      if (!complete || !draft.trim()) throw new Error('Kết nối AI bị gián đoạn trước khi hoàn tất. Vui lòng thử lại.');
+      return { ok: true, answer: draft.normalize('NFC'), remaining };
+    } finally {
+      reader.releaseLock();
+    }
   }
   $('new').addEventListener('click', () => { if (!busy) newChat(); });
   $('toggle-sidebar').addEventListener('click', () => { $('sidebar').classList.toggle('open'); });
@@ -139,17 +200,21 @@
     const prompt = $('prompt').value.trim().normalize('NFC');
     if (!prompt) return;
     const c = active();
-    c.messages.push({ role: 'user', content: prompt });
+    const item = { role: 'user', content: prompt };
+    c.messages.push(item);
     if (c.messages.length === 1) c.title = prompt.slice(0, 55);
     $('prompt').value = ''; save(); render(); lock(true);
+    const controller = new AbortController();
+    // Always recover the composer, even if a network path never completes.
+    const timeout = setTimeout(() => controller.abort(), 90000);
     try {
       const response = await fetch('https://bilabot2.bilabot-cvnss4-71bd4651.workers.dev/api/public/chat', {
         method: 'POST', credentials: 'omit',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ messages: boundedContext(c.messages) })
+        headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+        body: JSON.stringify({ messages: boundedContext(c.messages) }),
+        signal: controller.signal
       });
-      const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể kết nối API.');
+      const data = await readAnswer(response);
       c.messages.push({ role: 'assistant', content: String(data.answer).normalize('NFC') });
       showNotice('');
       if (typeof data.remaining === 'number') {
@@ -160,8 +225,20 @@
       }
       save(); render();
     } catch (error) {
-      showNotice(error instanceof Error ? error.message : 'Yêu cầu thất bại');
-    } finally { lock(false); $('prompt').focus(); }
+      // Never leave a failed user prompt in the AI context as if it succeeded.
+      const position = c.messages.lastIndexOf(item);
+      if (position !== -1) c.messages.splice(position, 1);
+      if (!$('prompt').value) $('prompt').value = prompt;
+      save(); render();
+      const msg = error && error.name === 'AbortError'
+        ? 'Dịch vụ phản hồi quá lâu. Hãy thử lại với câu hỏi ngắn hơn.'
+        : error instanceof Error ? error.message : 'Yêu cầu thất bại';
+      showNotice(msg);
+    } finally {
+      clearTimeout(timeout);
+      lock(false);
+      $('prompt').focus();
+    }
   });
   if (chats.length) { current = chats[chats.length - 1].id; render(); }
   else newChat();

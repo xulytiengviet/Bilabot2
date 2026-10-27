@@ -110,9 +110,13 @@ describe('anonymous chat boundary', () => {
     const request = new Request('https://test.example/api/public/config')
     const missing = await handlePublicChatRoute(request, {})
     expect(await missing.json()).toMatchObject({ ready: false, provider: 'workers-ai' })
-    const configured = await handlePublicChatRoute(new Request('https://test.example/api/public/config'), {
+    const configured = await handlePublicChatRoute(new Request('https://test.example/api/public/config', {
+      headers: { 'cf-connecting-ip': '192.0.2.42' },
+    }), {
       AI: { run: async () => ({ response: 'Hello' }) } as unknown as Ai,
-      PUBLIC_VISITOR_QUOTA: { getByName: () => ({}) } as unknown as NonNullable<
+      PUBLIC_VISITOR_QUOTA: { getByName: () => ({
+        fetch: async () => Response.json({ ok: true, key: 'visitor-v1:test' }),
+      }) } as unknown as NonNullable<
         import('../src/public-chat.ts').PublicChatEnv['PUBLIC_VISITOR_QUOTA']
       >,
       PUBLIC_CHAT_RATE_LIMITER: { limit: async () => ({ success: true }) },
@@ -120,7 +124,7 @@ describe('anonymous chat boundary', () => {
     const source = await configured.text()
     expect(source).not.toContain('DEEPSEEK_API_KEY')
     expect(JSON.parse(source)).toMatchObject({
-      ready: true, provider: 'workers-ai', maxQuestionsPerIp: 10,
+      ready: true, quotaReady: true, provider: 'workers-ai', maxQuestionsPerIp: 10,
     })
   })
   it('rejects misconfigured rate limiting instead of exposing a free public proxy', async () => {
