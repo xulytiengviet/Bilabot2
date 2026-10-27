@@ -204,7 +204,7 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
       // No question is charged for provider failure / exhausted free allocation.
       await quotaCall(env, request, 'finish', token, false).catch(() => undefined)
       if (isFreeTierAllowanceError(cause)) {
-        return error(429, 'Hạn mức AI miễn phí của Cloudflare hôm nay đã hết. Vui lòng quay lại sau 07:00 sáng mai (giờ Việt Nam).')
+        return error(429, 'Hạn mức AI miễn phí của Cloudflare hôm nay đã hết. Hạn mức được cấp lại lúc 07:00 mỗi ngày (giờ Việt Nam). Vui lòng thử lại sau.')
       }
       return error(503, 'Dịch vụ AI đang bận hoặc tạm gián đoạn. Bạn chưa bị trừ lượt hỏi.')
     }
