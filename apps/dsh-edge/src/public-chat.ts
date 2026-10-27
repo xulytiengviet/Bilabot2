@@ -54,6 +54,7 @@ export function publicChatWithCors(request: Request, response: Response): Respon
   if (!origin) return response
   const headers = new Headers(response.headers)
   headers.set('access-control-allow-origin', origin)
+  headers.set('cross-origin-resource-policy', 'cross-origin')
   headers.append('vary', 'Origin')
   return new Response(response.body, {
     status: response.status, statusText: response.statusText, headers,
