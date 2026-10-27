@@ -190,8 +190,8 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
       const rawAnswer = typeof reply === 'object' && reply !== null
         && 'response' in reply && typeof reply.response === 'string' ? reply.response : ''
       // The distill model may include internal <think> blocks; never display them.
-      const answer = rawAnswer.replace(/<think>[\\s\\S]*?<\\/think>/giu, '')
-        .replace(/<think>[\\s\\S]*$/giu, '').trim()
+      const answer = rawAnswer.replace(/<think>[\s\S]*?<\/think>/giu, '')
+        .replace(/<think>[\s\S]*$/giu, '').trim()
       if (!answer) throw new Error('Empty AI response')
       const committed = await quotaCall(env, request, 'finish', token, true)
       if (!committed.ok) throw new Error('Quota confirmation failed')
