@@ -82,11 +82,11 @@ describe('anonymous chat boundary', () => {
   it('returns allowlisted CORS on public API responses only', async () => {
     const uri = 'https://bilabot2.example/api/public/config'
     const r = new Request(uri, { headers: { origin: 'https://xulytiengviet.github.io' } })
-    const response = await handlePublicChatRoute(r, { DEEPSEEK_API_KEY: 'secret-test' })
+    const response = await handlePublicChatRoute(r, {})
     const cors = publicChatWithCors(r, response)
     expect(cors.headers.get('access-control-allow-origin')).toBe('https://xulytiengviet.github.io')
     expect(cors.headers.get('vary')).toContain('Origin')
-    expect((await cors.text())).not.toContain('secret-test')
+    expect((await cors.text())).toContain('workers-ai')
     const untrusted = new Request(uri, { headers: { origin: 'https://attacker.invalid' } })
     const blocked = publicChatWithCors(untrusted, new Response('{}'))
     expect(blocked.headers.has('access-control-allow-origin')).toBe(false)
@@ -96,28 +96,38 @@ describe('anonymous chat boundary', () => {
     const response = await handlePublicChatRoute(new Request('https://bilabot2.example/api/public/chat', {
       method: 'POST', headers: { origin: 'https://xulytiengviet.github.io', 'content-type': 'application/json' },
       body: JSON.stringify({ messages: [{ role: 'user', content: 'Xin chào' }] })
-    }), { DEEPSEEK_API_KEY: 'secret-test' })
+    }), {})
     expect(response.status).toBe(503) // Missing limiter stays fail-closed.
   })
   it('rejects cross-origin and does not call upstream', async () => {
     const response = await handlePublicChatRoute(new Request('https://test.example/api/public/chat', {
       method: 'POST', headers: { origin: 'https://evil.example', 'content-type': 'application/json' },
       body: JSON.stringify({ messages: [{ role: 'user', content: 'hello' }] }),
-    }), { DEEPSEEK_API_KEY: 'test-secret' })
+    }), {})
     expect(response.status).toBe(403)
   })
-  it('never reveals the API key from config', async () => {
-    const response = await handlePublicChatRoute(new Request('https://test.example/api/public/config'),
-      { DEEPSEEK_API_KEY: 'very-private', DEEPSEEK_MODEL: 'deepseek-flash' })
-    const source = await response.text()
-    expect(source).not.toContain('very-private')
-    expect(JSON.parse(source)).toMatchObject({ ready: true, model: 'deepseek-flash' })
+  it('is keyless: config reports Workers AI and readiness only with required bindings', async () => {
+    const request = new Request('https://test.example/api/public/config')
+    const missing = await handlePublicChatRoute(request, {})
+    expect(await missing.json()).toMatchObject({ ready: false, provider: 'workers-ai' })
+    const configured = await handlePublicChatRoute(new Request('https://test.example/api/public/config'), {
+      AI: { run: async () => ({ response: 'Hello' }) } as unknown as Ai,
+      PUBLIC_VISITOR_QUOTA: { getByName: () => ({}) } as unknown as NonNullable<
+        import('../src/public-chat.ts').PublicChatEnv['PUBLIC_VISITOR_QUOTA']
+      >,
+      PUBLIC_CHAT_RATE_LIMITER: { limit: async () => ({ success: true }) },
+    })
+    const source = await configured.text()
+    expect(source).not.toContain('DEEPSEEK_API_KEY')
+    expect(JSON.parse(source)).toMatchObject({
+      ready: true, provider: 'workers-ai', maxQuestionsPerIp: 10,
+    })
   })
   it('rejects misconfigured rate limiting instead of exposing a free public proxy', async () => {
     const response = await handlePublicChatRoute(new Request('https://test.example/api/public/chat', {
       method: 'POST', headers: { origin: 'https://test.example', 'content-type': 'application/json' },
       body: JSON.stringify({ messages: [{ role: 'user', content: 'hello' }] }),
-    }), { DEEPSEEK_API_KEY: 'test-secret' })
+    }), {})
     expect(response.status).toBe(503)
   })
 })
