@@ -11,7 +11,7 @@
   const traceStart = 'Đã tiếp nhận câu hỏi.\nĐã chuẩn bị ngữ cảnh hội thoại.\nĐang chờ Cloudflare Workers AI trả lời.';
   const traceDone = 'Đã tiếp nhận câu hỏi.\nĐã gửi yêu cầu tới Cloudflare Workers AI.\nĐã nhận câu trả lời từ mô hình.\nĐã hoàn thiện nội dung tiếng Việt Unicode.';
   const cleanAnswer = raw => String(raw || '').replace(/<think>[\s\S]*?<\/think>/giu, '')
-    .replace(/<think>[\s\S]*$/giu, '').trim().normalize('NFC');
+    .replace(/<think>[\s\S]*$/giu, '').replace(/<\/final_answer>\s*$/giu, '').trim().normalize('NFC');
   function appendInline(target, raw) {
     const value = String(raw).replace(/\\([*#_])/g, '$1');
     const rx = /(\*\*[^*\n]+?\*\*|__[^_\n]+?__|\x60[^\x60\n]+\x60|\*[^*\n]+?\*|\[[^\]\n]+\]\(https?:\/\/[^\s)]+\))/g;
@@ -111,12 +111,16 @@
     flush();
     if (inCode) flushCode();
   }
-  function updateProgress(card, message, seconds) {
+  function updateProgress(card, message, seconds, note) {
     if (!card || !card.isConnected) return;
+    if (typeof note === 'string') card.dataset.publicNotes = note.slice(0, 2400);
     const status = card.querySelector('.reason-status');
     const content = card.querySelector('.reason-code');
     if (status) status.textContent = message;
-    if (content) content.textContent = cvssPreview(traceStart + (seconds == null ? '' : '\nThời gian xử lý: ' + seconds + ' giây.'));
+    if (content) {
+      const text = (card.dataset.publicNotes || '').trim();
+      content.textContent = cvssPreview(text || traceStart);
+    }
   }
 
   let chats = [], current = '', busy = false;
@@ -218,7 +222,14 @@
     $('messages').replaceChildren();
     const messages = active()?.messages || [];
     if (messages.length === 0) $('messages').append(hero());
-    else for (const m of messages) $('messages').append(createMessage(m));
+    else for (const [i, m] of messages.entries()) {
+      const item = createMessage(m);
+      if (i === messages.length - 1 && m.role === 'assistant' && m.trace) {
+        const details = item.querySelector('.reasoning-panel');
+        if (details) details.open = true;
+      }
+      $('messages').append(item);
+    }
     $('messages').scrollTop = $('messages').scrollHeight;
   }
   function lock(value) {
@@ -256,7 +267,7 @@
     updateProgress(card, 'Đang nhận dữ liệu');
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '', draft = '', complete = false, remaining;
+    let buffer = '', draft = '', publicNotes = '', complete = false, remaining;
     try {
       while (true) {
         const part = await reader.read();
@@ -273,7 +284,12 @@
           if (!source) continue;
           let event;
           try { event = JSON.parse(source); } catch { continue; }
-          if (event.type === 'status' && !draft) updateProgress(card, 'AI đang phản hồi');
+          if (event.type === 'status' && !draft) updateProgress(card, 'Đang phân tích câu hỏi');
+          if (event.type === 'trace_delta' && typeof event.text === 'string') {
+            publicNotes = (publicNotes + event.text).slice(0, 2400);
+            updateProgress(card, 'Đang giải thích · CVNSS4.0', null, publicNotes);
+            $('messages').scrollTop = $('messages').scrollHeight;
+          }
           if (event.type === 'delta' && typeof event.text === 'string') {
             draft += event.text;
             renderAnswer(label, draft);
@@ -288,7 +304,7 @@
         }
       }
       if (!complete || !draft.trim()) throw new Error('Kết nối AI bị gián đoạn trước khi hoàn tất. Vui lòng thử lại.');
-      return { ok: true, answer: draft.normalize('NFC'), remaining };
+      return { ok: true, answer: cleanAnswer(draft), trace: publicNotes.trim(), remaining };
     } finally {
       reader.releaseLock();
     }
@@ -338,7 +354,7 @@
         signal: controller.signal
       });
       const data = await readAnswer(response, live);
-      c.messages.push({ role: 'assistant', content: cleanAnswer(data.answer), trace: traceDone, elapsed: Math.max(1, Math.round((Date.now() - started) / 1000)) });
+      c.messages.push({ role: 'assistant', content: cleanAnswer(data.answer), trace: String(data.trace || live.dataset.publicNotes || '').trim().slice(0, 2400) || traceDone, elapsed: Math.max(1, Math.round((Date.now() - started) / 1000)) });
       showNotice('');
       if (typeof data.remaining === 'number') {
         $('quota-info').textContent = data.remaining > 0
