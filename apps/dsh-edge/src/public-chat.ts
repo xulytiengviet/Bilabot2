@@ -131,11 +131,22 @@ export async function handlePublicChatRoute(request: Request, env: PublicChatEnv
     return new Response(cvnssConverterSource, { headers: headers('text/javascript; charset=utf-8') })
   }
   if (request.method === 'GET' && url.pathname === '/api/public/config') {
+    const bindingsReady = Boolean(env.AI && env.PUBLIC_VISITOR_QUOTA && env.PUBLIC_CHAT_RATE_LIMITER)
+    // A declared binding alone can misleadingly report ready:true when a new
+    // SQLite DO class failed to initialize. Check the real quota service.
+    let quotaReady = false
+    if (bindingsReady) {
+      try {
+        const ping = await quotaCall(env, request, 'key')
+        quotaReady = ping.ok && typeof ping.key === 'string'
+      } catch { /* Do not reveal platform or IP details. */ }
+    }
     return result({
       ok: true,
       model: PUBLIC_AI_MODEL,
       provider: 'workers-ai',
-      ready: Boolean(env.AI && env.PUBLIC_VISITOR_QUOTA && env.PUBLIC_CHAT_RATE_LIMITER),
+      ready: bindingsReady && quotaReady,
+      quotaReady,
       maxQuestionsPerIp: PUBLIC_VISITOR_MAX_QUESTIONS,
     })
   }
